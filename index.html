@@ -1135,8 +1135,12 @@ html, body {
   document.addEventListener('mouseleave', resetNavAcc);
 
   // ── Click / tap ───────────────────────────────────────────
+  // On mobile, touchend handles taps directly.
+  // This click handler is desktop-only — suppress if a touch just fired.
+  let lastTouch = 0;
   document.addEventListener('click', e => {
     if (e.target.closest('a') || e.target.closest('.pd')) return;
+    if (Date.now() - lastTouch < 600) return;  // was a touch, already handled
     const now = Date.now();
     if (now - lastTransition < COOLDOWN_MS) return;
     next();
@@ -1159,8 +1163,10 @@ html, body {
     e.deltaY > 0 ? next() : prev();
   }, { passive: false });
 
-  // ── Touch swipe ──────────────────────────────────────────
-  let tY = 0, tX = 0, tT = 0;
+  // ── Touch — tap and swipe ─────────────────────────────────
+  const TOUCH_COOLDOWN = 2200;
+  let tY = 0, tX = 0, tT = 0, lastTouchNav = 0;
+
   document.addEventListener('touchstart', e => {
     tY = e.touches[0].clientY;
     tX = e.touches[0].clientX;
@@ -1168,22 +1174,28 @@ html, body {
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
+    if (e.target.closest('a') || e.target.closest('.pd')) return;
+    lastTouch = Date.now();
+    const now  = Date.now();
+    if (busy) return;
+    if (now - lastTouchNav < TOUCH_COOLDOWN) return;
+
     const dy   = tY - e.changedTouches[0].clientY;
     const dx   = tX - e.changedTouches[0].clientX;
-    const dt   = Math.max(1, Date.now() - tT);
+    const dt   = Math.max(1, now - tT);
     const dist = Math.sqrt(dx*dx + dy*dy);
     const vel  = dist / dt;
-    if (dist < 12 && dt < 300) {
-      const now = Date.now();
-      if (now - lastTransition >= COOLDOWN_MS) { lastTransition = now; next(); }
+
+    if (dist < 20 && dt < 400) {
+      lastTouchNav   = now;
+      lastTransition = now;
+      next();
       return;
     }
-    if (vel > 0.3 && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 55) {
-      const now = Date.now();
-      if (now - lastTransition >= COOLDOWN_MS) {
-        lastTransition = now;
-        dy > 0 ? next() : prev();
-      }
+    if (vel > 0.25 && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 40) {
+      lastTouchNav   = now;
+      lastTransition = now;
+      dy > 0 ? next() : prev();
     }
   }, { passive: true });
 
