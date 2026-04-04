@@ -1257,9 +1257,11 @@ html, body {
     pointer-events: none;
     z-index: 4;
     opacity: 0;
-    filter: blur(6px) brightness(0.72);
+    filter: blur(10px) brightness(0.72);
     transition: none;
     mix-blend-mode: screen;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+-webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
   `;
   document.body.appendChild(img);
 
@@ -1284,13 +1286,13 @@ html, body {
       } else if (elapsed < FADE_IN_MS + HOLD_MS) {
         // Hold — stays blurry so it never looks like a photo
         opacity  = 0.55;
-        blurPx   = 4;
+        blurPx   = 8;
       } else {
         // Dissolve — opacity drops and blur increases so it smokes away
         const p  = (elapsed - FADE_IN_MS - HOLD_MS) / FADE_OUT_MS;
         const ep = 1.0 - (1.0 - p) * (1.0 - p);  // ease-in dissolve
         opacity  = 0.55 * (1.0 - ep);
-        blurPx   = 4 + ep * 18;             // blur grows as it vanishes
+        blurPx   = 4 + ep * 26;             // blur grows as it vanishes
       }
 
       img.style.opacity = String(Math.max(0, opacity).toFixed(3));
