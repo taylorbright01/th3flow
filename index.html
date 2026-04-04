@@ -176,8 +176,13 @@ html, body {
 }
 .pd.on { background:rgba(220,212,200,.7); transform:scale(1.7); }
 
-/* Ghost idle text */
-#ghost {
+/* s4 scramble words */
+.hw {
+  display:inline-block;
+  transition: transform 0.8s cubic-bezier(.4,0,.2,1),
+              opacity   0.5s ease;
+  white-space: nowrap;
+}
   position:fixed; top:50%; left:50%;
   transform:translate(-50%,-50%);
   z-index:20;
@@ -204,6 +209,9 @@ html, body {
 
 <!-- Film grain overlay -->
 <div id="grain"></div>
+
+<!-- Cheshire smile — appears on s1 after transition, fades over 4s -->
+<canvas id="cheshire" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:0;transition:opacity 0.4s ease;"></canvas>
 
 <!-- Ghost idle message -->
 <div id="ghost">Look closer.</div>
@@ -251,7 +259,16 @@ html, body {
   </section>
 
   <section class="screen" id="s4">
-    <h1 class="hl">The market never needed to change.<br>You did.</h1>
+    <h1 class="hl" id="s4-headline" style="position:relative;">
+      <span class="hw">THE</span>
+      <span class="hw">MARKET</span>
+      <span class="hw">NEVER</span>
+      <span class="hw">NEEDED</span>
+      <span class="hw">TO</span>
+      <span class="hw">CHANGE.</span><br>
+      <span class="hw">YOU</span>
+      <span class="hw">DID.</span>
+    </h1>
     <p class="s-label">Where to find TH3FLOW</p>
     <div class="s-links">
       <a class="sl" href="https://discord.gg/UjdzfMgu4r">Discord</a>
@@ -407,12 +424,13 @@ html, body {
 
     uniform float uTime;
     uniform vec2  uRes;
-    uniform vec2  uMouse;
-    uniform vec2  uMvel;
-    uniform float uMwake;
+    uniform vec2  uMouse;      // cursor as light source position (GL coords)
+    uniform vec2  uMvel;       // kept for local disturb
+    uniform float uMwake;      // kept for local disturb
+    uniform float uBreath;     // slow 0..1 pulse for background light breathing
     uniform float uTransition; // unused, kept for compat
-    uniform float uT;          // 0→1 engulf, 1→0 reveal — single continuous value
-    uniform float uPhase;      // 0 = engulf direction, 1 = reveal direction
+    uniform float uT;
+    uniform float uPhase;
 
     varying vec2 vUv;
 
@@ -568,31 +586,46 @@ html, body {
 
 
       // ── Lighting ──────────────────────────────────────
-      vec2  lpos   = vec2(0.52*aspect, 0.76);
+      // Primary light: cursor position (acts as a torch behind the smoke).
+      // When mouse is off-screen (uMouse.x < -0.5) fall back to fixed position.
+      // Mouse light is 40% dimmer than the old fixed light was, so the smoke
+      // still reads as dark and atmospheric — the cursor illuminates locally.
+      vec2 cursorLight = (uMouse.x > -0.5)
+        ? vec2(uMouse.x * aspect, uMouse.y)   // cursor in aspect-corrected space
+        : vec2(0.52 * aspect, 0.76);           // fallback fixed position
+
+      vec2  lpos   = cursorLight;
       vec2  ldir   = normalize(lpos - aUv);
       float ldist  = length(lpos - aUv);
 
-      // Tighter falloff — smaller lit zone, light stays concentrated
+      // Falloff — same as before, just driven by cursor position
       float falloff = 1.0 / (1.0 + ldist*ldist*1.8);
+      // 40% dimmer than the original fixed light
+      falloff *= 0.60;
 
       float trans   = transmittance(aUv, t, ldir*0.85);
 
-      // Secondary fill — kept very faint to preserve shadow depth
+      // Background breathing light: slow sine pulse that gives the scene
+      // a sense of being alive even when the cursor isn't moving.
+      // Positioned upper-centre so it reads as a hidden source deep in smoke.
+      float breath  = 0.5 + 0.5 * uBreath;  // 0..1 pulsing
+      vec2  bpos    = vec2(0.50 * aspect, 0.80);
+      float bdist   = length(bpos - aUv);
+      float bfall   = 1.0 / (1.0 + bdist*bdist*3.5);
+      float btrans  = transmittance(aUv, t, normalize(bpos-aUv)*0.7);
+      float blit    = btrans * bfall * breath * 0.18;  // subtle, just a pulse
+
+      // Secondary fill — very faint
       vec2  lpos2    = vec2(0.20*aspect, 0.22);
       float ldist2   = length(lpos2 - aUv);
       float falloff2 = 1.0 / (1.0 + ldist2*ldist2*3.5);
       float trans2   = transmittance(aUv, t, normalize(lpos2-aUv)*0.6);
-      float fill     = trans2 * falloff2 * 0.07;   // dimmer than before
+      float fill     = trans2 * falloff2 * 0.07;
 
-      // pow(3.8): only the very thinnest wisp edges catch light — no broad halos
       float scatter = pow(clamp(1.0-den, 0.0, 1.0), 2.4)
                     * falloff * trans * 0.90;
-
-      // Transmitted: light through genuine voids
       float transm  = trans * falloff * den * 0.28;
-
-      // Self-lit: removed — was contributing to the foggy centre feel
-      float lit = scatter*0.70 + transm*0.16 + fill*0.08;
+      float lit = scatter*0.70 + transm*0.16 + fill*0.08 + blit;
 
       // Contrast boost on lit: sharpen the difference between lit/unlit smoke
       // This is what makes highlights feel small and precious rather than diffuse
@@ -674,9 +707,10 @@ html, body {
     uMouse:      { value: new THREE.Vector2(-2.0, -2.0) },
     uMvel:       { value: new THREE.Vector2(0.0,  0.0)  },
     uMwake:      { value: 0.0 },
+    uBreath:     { value: 0.0 },   // breathing background light pulse
     uTransition: { value: 0.0 },
-    uT:          { value: 0.0 },  // 0→1 engulf, 1→0 reveal
-    uPhase:      { value: 0.0 }   // 0=engulf, 1=reveal
+    uT:          { value: 0.0 },
+    uPhase:      { value: 0.0 }
   };
 
   const smokeMat = new THREE.ShaderMaterial({
@@ -957,9 +991,13 @@ html, body {
     }
 
     smokeUniforms.uTime.value       = elapsed;
+    // Pass cursor position as light source (GL coords, Y-flipped)
     smokeUniforms.uMouse.value.set(mousePosSmooth.x, mousePosSmooth.y);
     smokeUniforms.uMvel.value.set(mvel.x, mvel.y);
     smokeUniforms.uMwake.value      = mwake;
+    // Breathing: two overlapping slow sines so the rhythm feels organic
+    smokeUniforms.uBreath.value     = Math.sin(elapsed * 0.38) * 0.5
+                                    + Math.sin(elapsed * 0.61) * 0.5;
     smokeUniforms.uTransition.value = 0.0;
     smokeUniforms.uT.value          = uT;
     smokeUniforms.uPhase.value      = uPh;
@@ -1062,6 +1100,14 @@ html, body {
       screens[toN].classList.add('active');
       dots[fromN].classList.remove('on');
       dots[toN].classList.add('on');
+      // Trigger Cheshire smile when landing on s1
+      if (toN === 1 && window._triggerCheshire) {
+        setTimeout(window._triggerCheshire, ST.REVEAL_MS * 0.85);
+      }
+      // Trigger headline scramble when landing on s4
+      if (toN === 4 && window._triggerS4Scramble) {
+        setTimeout(window._triggerS4Scramble, ST.REVEAL_MS * 0.85);
+      }
       setTimeout(() => { busy = false; }, ST.REVEAL_MS + 400);
     };
 
@@ -1194,6 +1240,343 @@ html, body {
     goTo(+d.dataset.i);
   }));
 
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+//  CHESHIRE — cat grin + eyes in top-right, made of smoke wisps
+//  Shape: wide curved grin with upturned corners (like the image),
+//  two almond cat eyes above. All drawn as layered blurred strokes
+//  so it reads as smoke, not a cartoon.
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const cv  = document.getElementById('cheshire');
+  const ctx = cv.getContext('2d');
+
+  function resize() {
+    cv.width  = window.innerWidth;
+    cv.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Draw the Cheshire face in the top-right corner.
+  // All dimensions are relative to viewport so it scales correctly.
+  function drawCheshire(alpha) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (alpha <= 0) return;
+
+    const W = cv.width, H = cv.height;
+
+    // Anchor: top-right corner, pushed inward so it's partially clipped
+    // by the vignette — sits in the dark border region
+    const ox = W * 0.82;   // horizontal centre of the face
+    const oy = H * 0.18;   // vertical centre of the face
+    const scale = Math.min(W, H) * 0.14;  // overall size
+
+    // ── GRIN ─────────────────────────────────────────────
+    // Smoke technique: NO sharp/thin passes — only wide blurry strokes
+    // stacked up. The key is that the sharpest pass has blur:8 minimum
+    // and very low alpha, so you never see a clean line — only a soft
+    // luminous cloud. More passes at different blur radii = more depth.
+    const gL  = ox - scale * 1.1;
+    const gR  = ox + scale * 1.1;
+    const gTy = oy + scale * 0.1;
+    const gCy = oy + scale * 0.72;
+
+    const cp1x = gL + scale * 0.5, cp1y = gCy + scale * 0.12;
+    const cp2x = gR - scale * 0.5, cp2y = gCy + scale * 0.12;
+
+    // Draw one shape through multiple blur passes — only soft blobs, no hard lines
+    const grinPasses = [
+      { blur: 38, a: 0.12, w: 80 },  // outermost glow halo
+      { blur: 20, a: 0.20, w: 50 },  // broad soft smoke mass
+      { blur: 10, a: 0.28, w: 28 },  // mid-density body
+      { blur:  5, a: 0.18, w: 14 },  // tighter but still very soft
+      // NO pass below blur:5 — that's what causes the laser line
+    ];
+
+    for (const p of grinPasses) {
+      ctx.save();
+      ctx.globalAlpha = alpha * p.a;
+      ctx.filter      = `blur(${p.blur}px)`;
+      ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
+      ctx.lineWidth   = p.w;
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(gL, gTy);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, gR, gTy);
+      ctx.stroke();
+
+      // Corner curls
+      ctx.beginPath();
+      ctx.moveTo(gL, gTy);
+      ctx.quadraticCurveTo(gL - scale * 0.22, gTy - scale * 0.32,
+                           gL - scale * 0.06, gTy - scale * 0.52);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(gR, gTy);
+      ctx.quadraticCurveTo(gR + scale * 0.22, gTy - scale * 0.32,
+                           gR + scale * 0.06, gTy - scale * 0.52);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // ── TEETH — very faint smoke smudges ─────────────────
+    const teethCount = 7;
+    for (let ti = 0; ti < teethCount; ti++) {
+      const tt = (ti + 0.5) / teethCount;
+      const tx = gL + (gR - gL) * tt;
+      const bt = tt;
+      const ty = (1-bt)*(1-bt)*(1-bt)*gTy
+               + 3*(1-bt)*(1-bt)*bt*(oy + scale * 0.5)
+               + 3*(1-bt)*bt*bt*(oy + scale * 0.5)
+               + bt*bt*bt*gTy;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.08;
+      ctx.filter = 'blur(8px)';  // teeth are smoke smudges, not lines
+      ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
+      ctx.lineWidth = 12;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tx, ty + scale * 0.06);
+      ctx.lineTo(tx, ty + scale * 0.22);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── EYES — soft smoke ovals, no sharp outlines ────────
+    const eyeY   = oy - scale * 0.30;
+    const eyeSep = scale * 0.52;
+    const eyeW   = scale * 0.30;
+    const eyeH   = scale * 0.16;
+
+    const eyePasses = [
+      { blur: 22, a: 0.10, w: 36 },
+      { blur: 10, a: 0.18, w: 18 },
+      { blur:  5, a: 0.14, w:  8 },
+      // again: nothing sharper than blur:5
+    ];
+
+    for (const ex of [ox - eyeSep, ox + eyeSep]) {
+      for (const p of eyePasses) {
+        ctx.save();
+        ctx.globalAlpha = alpha * p.a;
+        ctx.filter      = `blur(${p.blur}px)`;
+        ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
+        ctx.lineWidth   = p.w;
+        ctx.lineCap     = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ex - eyeW, eyeY);
+        ctx.quadraticCurveTo(ex, eyeY - eyeH, ex + eyeW, eyeY);
+        ctx.quadraticCurveTo(ex, eyeY + eyeH, ex - eyeW, eyeY);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  window._triggerCheshire = function() {
+    const start    = performance.now();
+    const DURATION = 3800;  // shorter total
+
+    function fade() {
+      const p = Math.min(1.0, (performance.now() - start) / DURATION);
+      // Fade in quickly, hold briefly, dissolve more quickly
+      let a;
+      if      (p < 0.15) a = p / 0.15;                    // 0.6s fade in
+      else if (p < 0.45) a = 1.0;                          // ~1.1s hold (was 0.65)
+      else               a = 1.0 - (p - 0.45) / 0.55;    // ~2.1s dissolve
+
+      drawCheshire(a);
+      cv.style.opacity = '1';
+      if (p < 1.0) requestAnimationFrame(fade);
+      else {
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        cv.style.opacity = '0';
+      }
+    }
+    requestAnimationFrame(fade);
+  };
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+//  S4 HEADLINE SCRAMBLE — words physically move to correct places
+//
+//  Technique: FLIP (First, Last, Invert, Play)
+//  1. Render headline in WRONG order (no animation yet)
+//  2. Record each word's bounding rect (First positions)
+//  3. Rearrange DOM to CORRECT order (instantly, off-screen feel)
+//  4. Record each word's new bounding rect (Last positions)
+//  5. Apply inverse transform to each word (so they appear to still
+//     be in wrong positions)
+//  6. Animate transforms to zero — words slide to correct places
+//
+//  Wrong:   "THE MARKET NEVER NEEDED YOU. / YOU NEEDED TO CHANGE."
+//  Correct: "THE MARKET NEVER NEEDED TO CHANGE. / YOU DID."
+//
+//  Words that appear in both sentences physically travel across the
+//  headline. "THE MARKET NEVER NEEDED" barely move. "TO" flies from
+//  line 2 up to line 1. "YOU" slides left. "CHANGE." moves right.
+//  "DID." fades in (new word, no First position).
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const headline = document.getElementById('s4-headline');
+  if (!headline) return;
+
+  // Word definitions — id, display text, which sentence it belongs to
+  // wrongLine/correctLine: 1 or 2
+  const WORDS = [
+    { id:'THE',     text:'THE',     wrong:1, correct:1 },
+    { id:'MARKET',  text:'MARKET',  wrong:1, correct:1 },
+    { id:'NEVER',   text:'NEVER',   wrong:1, correct:1 },
+    { id:'NEEDED',  text:'NEEDED',  wrong:1, correct:1 },
+    // "TO" moves from line 2 wrong → line 1 correct
+    { id:'TO',      text:'TO',      wrong:2, correct:1 },
+    // "CHANGE." stays on same line, moves position
+    { id:'CHANGE',  text:'CHANGE.', wrong:2, correct:1 },
+    // "YOU." wrong line 1 → correct line 2 as "YOU"
+    { id:'YOU',     text:'YOU',     wrong:1, correct:2 },
+    // "NEEDED2" wrong line 2 — disappears (no correct counterpart shown)
+    { id:'NEEDED2', text:'NEEDED',  wrong:2, correct:null },
+    // "DID." is new — only in correct
+    { id:'DID',     text:'DID.',    wrong:null, correct:2 },
+  ];
+
+  function buildWrong() {
+    // Wrong: "THE MARKET NEVER NEEDED YOU." / "YOU NEEDED TO CHANGE."
+    headline.innerHTML = '';
+    headline.style.position = 'relative';
+
+    // Line 1
+    const line1 = document.createElement('div');
+    line1.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;';
+    for (const id of ['THE','MARKET','NEVER','NEEDED','YOU']) {
+      const w = WORDS.find(x => x.id === id);
+      const sp = document.createElement('span');
+      sp.className   = 'hw';
+      sp.dataset.wid = id;
+      sp.textContent = id === 'YOU' ? 'YOU.' : w.text;
+      line1.appendChild(sp);
+    }
+    // Line 2
+    const line2 = document.createElement('div');
+    line2.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;margin-top:0.15em;';
+    for (const id of ['YOU','NEEDED2','TO','CHANGE']) {
+      const w = WORDS.find(x => x.id === id);
+      const sp = document.createElement('span');
+      sp.className   = 'hw';
+      sp.dataset.wid = id;
+      sp.textContent = id === 'YOU' ? 'YOU' : w.text;
+      line2.appendChild(sp);
+    }
+    headline.appendChild(line1);
+    headline.appendChild(line2);
+  }
+
+  function buildCorrect() {
+    // Correct: "THE MARKET NEVER NEEDED TO CHANGE." / "YOU DID."
+    headline.innerHTML = '';
+    headline.style.position = 'relative';
+
+    const line1 = document.createElement('div');
+    line1.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;';
+    for (const id of ['THE','MARKET','NEVER','NEEDED','TO','CHANGE']) {
+      const w = WORDS.find(x => x.id === id);
+      const sp = document.createElement('span');
+      sp.className   = 'hw';
+      sp.dataset.wid = id;
+      sp.textContent = w.text;
+      line1.appendChild(sp);
+    }
+    const line2 = document.createElement('div');
+    line2.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;margin-top:0.15em;';
+    for (const id of ['YOU','DID']) {
+      const w = WORDS.find(x => x.id === id);
+      const sp = document.createElement('span');
+      sp.className   = 'hw';
+      sp.dataset.wid = id;
+      sp.textContent = w.text;
+      if (id === 'DID') {
+        sp.style.opacity = '0';  // DID is new, will fade in
+      }
+      line2.appendChild(sp);
+    }
+    headline.appendChild(line1);
+    headline.appendChild(line2);
+  }
+
+  window._triggerS4Scramble = function() {
+    // Step 1: render wrong layout
+    buildWrong();
+
+    // Wait for 2.2s, then do the FLIP animation
+    setTimeout(() => {
+      // Fade out words that don't survive into the correct sentence (NEEDED2)
+      // before doing the FLIP so they dissolve slowly rather than snap away
+      const fadingIds = ['NEEDED2'];
+      headline.querySelectorAll('.hw').forEach(el => {
+        if (fadingIds.includes(el.dataset.wid)) {
+          el.style.transition = 'opacity 1.4s ease';
+          el.style.opacity    = '0';
+        }
+      });
+
+      // Wait for the slow fade, then do the FLIP
+      setTimeout(() => {
+
+      // ── FIRST: record current positions ──────────────
+      const firstPos = {};
+      headline.querySelectorAll('.hw').forEach(el => {
+        if (fadingIds.includes(el.dataset.wid)) return; // already gone
+        const rect = el.getBoundingClientRect();
+        firstPos[el.dataset.wid] = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+      });
+
+      // ── LAST: switch to correct layout ───────────────
+      buildCorrect();
+      headline.getBoundingClientRect(); // force reflow
+
+      // ── INVERT: apply transforms so words appear in old positions ──
+      headline.querySelectorAll('.hw').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const lastX = rect.left + rect.width/2;
+        const lastY = rect.top  + rect.height/2;
+        const fp = firstPos[el.dataset.wid];
+        if (fp) {
+          const dx = fp.x - lastX;
+          const dy = fp.y - lastY;
+          el.style.transition = 'none';
+          el.style.transform  = `translate(${dx}px, ${dy}px)`;
+        } else {
+          // New word (DID) — fade in from slightly below
+          el.style.transition = 'none';
+          el.style.opacity    = '0';
+          el.style.transform  = 'translateY(14px)';
+        }
+      });
+
+      // ── PLAY: animate to final positions — slow and deliberate ──
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          headline.querySelectorAll('.hw').forEach((el, i) => {
+            const delay = i * 120;  // generous stagger — words arrive one by one
+            el.style.transition = `transform 1.6s ${delay}ms cubic-bezier(.25,0,.2,1),
+                                   opacity   1.0s ${delay + 200}ms ease`;
+            el.style.transform  = 'translate(0, 0)';
+            el.style.opacity    = '1';
+          });
+        });
+      });
+
+      }, 1200); // wait for the fade-out to mostly complete before rearranging
+    }, 2200);
+  };
 })();
 
 
