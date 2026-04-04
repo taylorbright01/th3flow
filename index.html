@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TH3FLOW — FOREX</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+:root { --ink:#020202; --ash:#c8c0b8; --ivory:#eae4db; }
+
+html, body {
+  width:100%; height:100%;
+  overflow:hidden;
+  background:var(--ink);
+  color:var(--ivory);
+  font-family:'Montserrat',sans-serif;
+  cursor:none;
+}
+
+/* WebGL canvas sits at z=0, fills everything */
+#glcanvas {
+  position:fixed; top:0; left:0;
+  width:100%; height:100%;
+  pointer-events:none;
+  z-index:0;
+  display:block;
+}
+
+/* Cursor */
+#cur  { position:fixed; z-index:9999; width:7px; height:7px; border-radius:50%; background:rgba(240,232,220,.95); pointer-events:none; transform:translate(-50%,-50%); mix-blend-mode:difference; }
+#cur-r{ position:fixed; z-index:9998; width:32px; height:32px; border-radius:50%; border:1px solid rgba(220,212,200,.28); pointer-events:none; transform:translate(-50%,-50%); }
+
+/* Film grain */
+#grain {
+  position:fixed; top:-50%; left:-50%; width:200%; height:200%;
+  pointer-events:none; z-index:2; opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:gr .4s steps(3) infinite;
+}
+@keyframes gr {
+  0%,100%{transform:translate(0,0)}
+  33%{transform:translate(-2%,-3%)}
+  66%{transform:translate(3%,1%)}
+}
+
+/* Veil is gone — transitions are driven by smoke density uniform */
+
+/* Stage holds all content screens */
+#stage {
+  position:fixed; top:0; left:0;
+  width:100%; height:100%;
+  z-index:3;
+}
+
+/* Screens: opacity driven by JS via inline style, no CSS transition.
+   The smoke IS the transition — JS syncs text visibility to smoke peak. */
+.screen {
+  position:absolute; top:0; left:0;
+  width:100%; height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  padding:48px 28px;
+  /* No transition here — JS drives opacity in sync with smoke */
+  will-change: opacity;
+}
+.screen.active { pointer-events:all; }
+
+/* Typography */
+.hl {
+  font-family:'Cormorant Garamond',serif;
+  font-weight:300;
+  font-size:clamp(1.7rem,4.8vw,4.4rem);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  line-height:1.18;
+  text-align:center;
+  color:var(--ivory);
+  text-shadow:0 0 120px rgba(255,248,238,.22), 0 2px 40px rgba(0,0,0,.85);
+}
+.sub {
+  font-family:'Cormorant Garamond',serif;
+  font-weight:300; font-style:italic;
+  font-size:clamp(.9rem,1.9vw,1.45rem);
+  letter-spacing:.1em; text-align:center;
+  color:rgba(234,228,219,.88);
+  margin-top:22px; line-height:1.75;
+  text-shadow: 0 2px 24px rgba(0,0,0,.95);
+}
+.para {
+  font-family:'Cormorant Garamond',serif;
+  font-weight:300;
+  font-size:clamp(.82rem,1.25vw,.98rem);
+  letter-spacing:.05em; text-align:center;
+  color:rgba(234,228,219,.7);
+  margin-top:20px; line-height:1.95;
+  max-width:540px;
+  text-shadow: 0 2px 24px rgba(0,0,0,.95);
+}
+.hint {
+  font-family:'Montserrat',sans-serif;
+  font-weight:200; font-size:.58rem;
+  letter-spacing:.45em; text-transform:uppercase;
+  color:rgba(200,192,184,.22);
+  margin-top:54px;
+  animation:ph 3.5s ease-in-out infinite;
+}
+@keyframes ph { 0%,100%{opacity:.22} 50%{opacity:.5} }
+
+.divider {
+  width:36px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(200,192,184,.3),transparent);
+  margin:28px auto;
+}
+
+#logo {
+  width:clamp(130px,20vw,220px);
+  filter:invert(1) brightness(.85);
+  opacity:.9;
+  margin-bottom:40px;
+}
+
+/* Screen 4 navigation links */
+.nav-links {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:10px 56px; margin-top:44px;
+}
+@media(max-width:500px){ .nav-links{ grid-template-columns:1fr; gap:16px; } }
+.nl {
+  font-family:'Montserrat',sans-serif;
+  font-weight:200;
+  font-size:clamp(.58rem,.85vw,.72rem);
+  letter-spacing:.32em; text-transform:uppercase;
+  color:rgba(234,228,219,.72);
+  text-decoration:none;
+  position:relative; transition:color .5s;
+  display:flex; align-items:center; gap:10px;
+  cursor:none;
+  text-shadow:0 1px 10px rgba(0,0,0,.95);
+}
+.nl::before { content:'·'; opacity:.4; transition:opacity .5s; }
+.nl:hover { color:rgba(220,212,200,.85); }
+.nl:hover::before { opacity:.8; }
+
+/* Screen 5 social links */
+.s-label {
+  font-family:'Montserrat',sans-serif;
+  font-weight:200; font-size:.55rem;
+  letter-spacing:.5em; text-transform:uppercase;
+  color:rgba(200,192,184,.18);
+  margin-top:48px; margin-bottom:22px;
+}
+.s-links { display:flex; flex-wrap:wrap; justify-content:center; gap:18px 32px; }
+.sl {
+  font-family:'Montserrat',sans-serif;
+  font-weight:200; font-size:.62rem;
+  letter-spacing:.38em; text-transform:uppercase;
+  color:rgba(234,228,219,.72);
+  text-decoration:none; transition:color .5s;
+  cursor:none;
+}
+.sl:hover { color:rgba(220,212,200,.78); }
+
+/* Progress dots */
+#prog {
+  position:fixed; right:24px; top:50%;
+  transform:translateY(-50%);
+  z-index:10; display:flex; flex-direction:column; gap:9px;
+}
+.pd {
+  width:3px; height:3px; border-radius:50%;
+  background:rgba(234,228,219,.42);
+  transition:background .5s, transform .4s;
+  cursor:none;
+}
+.pd.on { background:rgba(220,212,200,.7); transform:scale(1.7); }
+
+/* Ghost idle text */
+#ghost {
+  position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  z-index:20;
+  font-family:'Cormorant Garamond',serif;
+  font-weight:300; font-style:italic;
+  font-size:clamp(.9rem,1.8vw,1.3rem);
+  letter-spacing:.2em;
+  color:rgba(200,192,184,.1);
+  pointer-events:none; opacity:0;
+  transition:opacity 3s ease;
+  text-align:center;
+  text-shadow:0 0 60px rgba(200,192,184,.15);
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cur"></div>
+<div id="cur-r"></div>
+
+<!-- WebGL smoke background -->
+<canvas id="glcanvas"></canvas>
+
+<!-- Film grain overlay -->
+<div id="grain"></div>
+
+<!-- Ghost idle message -->
+<div id="ghost">Look closer.</div>
+
+<!-- Progress indicator -->
+<div id="prog">
+  <div class="pd on" data-i="0"></div>
+  <div class="pd" data-i="1"></div>
+  <div class="pd" data-i="2"></div>
+  <div class="pd" data-i="3"></div>
+  <div class="pd" data-i="4"></div>
+</div>
+
+<!-- Content screens -->
+<div id="stage">
+
+  <section class="screen active" id="s0">
+    <img id="logo" src="logo.png" alt="TH3FLOW FOREX" onerror="this.style.display='none'">
+    <h1 class="hl">You don't see the market.<br>You see what you understand.</h1>
+    <span class="hint">Move to reveal</span>
+  </section>
+
+  <section class="screen" id="s1">
+    <h1 class="hl">Most see noise.<br>Few see structure.</h1>
+    <div class="divider"></div>
+    <p class="sub">The difference isn’t access.<br>It's perception.</p>
+  </section>
+
+  <section class="screen" id="s2">
+    <h1 class="hl">You’ve found TH3FLOW</h1>
+    <div class="divider"></div>
+    <p class="sub">Not signals. Not shortcuts.<br>A way of seeing.</p>
+    <p class="para">TH3FLOW is not about more information. It’s about learning how to see. Share forex education, market ideas, and the discipline required to grow over time. Explore trading concepts, market structure, risk management, and the mindset needed to survive, learn, and build consistency.</p>
+  </section>
+
+  <section class="screen" id="s3">
+    <h1 class="hl">You can watch the market<br>or learn to read it.</h1>
+    <div class="divider"></div>
+    <nav class="nav-links">
+      <a class="nl" href="#DISCORD_LINK">Enter the discussion</a>
+      <a class="nl" href="#IDEAS_LINK">Explore market ideas</a>
+      <a class="nl" href="#RISK_LINK">Study risk management</a>
+      <a class="nl" href="#DISCIPLINE_LINK">Build trading discipline</a>
+    </nav>
+  </section>
+
+  <section class="screen" id="s4">
+    <h1 class="hl">The market never needed to change.<br>You did.</h1>
+    <p class="s-label">Where to find TH3FLOW</p>
+    <div class="s-links">
+      <a class="sl" href="https://discord.gg/UjdzfMgu4r">Discord</a>
+    </div>
+  </section>
+
+</div>
+
+<!-- Three.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  TH3FLOW — WebGL Smoke Engine v3
+//
+//  Art direction: thick backlit studio smoke, dark room,
+//  single hidden light source, no liquid/marble/swirl.
+//
+//  Pipeline:
+//    Pass 1  → Smoke density field          → rtSmoke
+//    Pass 2  → Volumetric light shaft       → rtShaft
+//    Pass 3  → Bright-pass threshold        → rtBrite
+//    Pass 4  → Gaussian blur H              → rtBlurA
+//    Pass 5  → Gaussian blur V (wide)       → rtBlurB
+//    Pass 6  → Composite all to screen
+//
+//  Smoke shader design:
+//    • Three independent noise layers at large/medium/fine scale,
+//      blended so no single pattern dominates
+//    • Drift is almost purely horizontal with very gentle Y turbulence
+//    • NO curl-noise vortices — they cause the marble/liquid look
+//    • Density is hard-thresholded into opaque/void regions
+//      giving the chunky, irregular cloud structure of real smoke
+//    • Light model: analytic extinction along 5 ray-march steps
+//      toward a fixed back-light, giving self-shadowed thickness
+//    • Mouse perturbs the advection velocity field, not position
+// ══════════════════════════════════════════════════════════════
+
+(function () {
+
+  // ── Input state ───────────────────────────────────────────
+  // mousePos  — cursor in normalised GL coords, used for LOCAL warp only
+  // mvel      — instantaneous velocity, decays each frame
+  // mwake     — accumulated wake magnitude, decays slowly (linger effect)
+  // Nothing here shifts the whole smoke field globally.
+  const mousePos       = { x: -2.0, y: -2.0 };  // off-screen = no effect
+  const mousePosSmooth = { x: -2.0, y: -2.0 };
+  const mvel           = { x: 0.0,  y: 0.0  };
+  let   mwake          = 0.0;
+  let   lmx = -2.0, lmy = -2.0;
+  let   mouseActive    = false;
+
+  document.addEventListener('mousemove', e => {
+    const nx = e.clientX / window.innerWidth;
+    const ny = 1.0 - e.clientY / window.innerHeight;
+    if (lmx > -1.0) {
+      mvel.x = Math.max(-0.04, Math.min(0.04, nx - lmx));
+      mvel.y = Math.max(-0.04, Math.min(0.04, ny - lmy));
+      mwake  = Math.min(1.0, mwake + Math.sqrt(mvel.x*mvel.x + mvel.y*mvel.y) * 8.0);
+    }
+    lmx = nx; lmy = ny;
+    mousePos.x = nx; mousePos.y = ny;
+    mouseActive = true;
+  });
+  document.addEventListener('mouseleave', () => { mouseActive = false; });
+  document.addEventListener('touchmove', e => {
+    mousePos.x = e.touches[0].clientX / window.innerWidth;
+    mousePos.y = 1.0 - e.touches[0].clientY / window.innerHeight;
+    mouseActive = true;
+  }, { passive: true });
+
+  // ── Renderer ──────────────────────────────────────────────
+  const canvas   = document.getElementById('glcanvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+  // Cap at 1.0 for perf — the blur passes hide any aliasing
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+  renderer.setClearColor(0x020202, 1);
+
+  let W = window.innerWidth;
+  let H = window.innerHeight;
+  const DPR = renderer.getPixelRatio();
+  renderer.setSize(W, H);
+
+  // ── Render targets ────────────────────────────────────────
+  const rtOpts = {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    format:    THREE.RGBAFormat,
+    type:      THREE.HalfFloatType
+  };
+  const mkRT = () => new THREE.WebGLRenderTarget(
+    Math.floor(W * DPR), Math.floor(H * DPR), rtOpts
+  );
+
+  let rtSmoke = mkRT();
+  let rtShaft = mkRT();
+  let rtBrite = mkRT();
+  let rtBlurA = mkRT();
+  let rtBlurB = mkRT();
+
+  // ── Fullscreen quad helpers ───────────────────────────────
+  const fsCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const fsGeo    = new THREE.PlaneBufferGeometry(2, 2);
+
+  function pass(mat, target) {
+    const sc = new THREE.Scene();
+    sc.add(new THREE.Mesh(fsGeo, mat));
+    renderer.setRenderTarget(target);   // null = screen
+    renderer.render(sc, fsCamera);
+    renderer.setRenderTarget(null);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  SHARED VERTEX SHADER
+  // ══════════════════════════════════════════════════════════
+  const vert = /* glsl */`
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }`;
+
+  // ══════════════════════════════════════════════════════════
+  //  PASS 1 — SMOKE DENSITY + EMBEDDED LIGHTING
+  //
+  //  Key art-direction decisions encoded here:
+  //
+  //  1. MOTION: drift = (slow_horizontal, very_small_vertical)
+  //     No rotational curl. Turbulence only at fine scale.
+  //
+  //  2. DENSITY LAYERS:
+  //     A — large-scale structure  (freq ~0.6)  → big opaque masses
+  //     B — medium flow detail     (freq ~1.6)  → irregular folds
+  //     C — fine wisp texture      (freq ~4.5)  → feathery edges
+  //     Combined with weighted blend, no layer dominates.
+  //
+  //  3. THRESHOLD:
+  //     Hard-clamp with smoothstep to create proper void/mass
+  //     contrast. This is what makes it read as smoke not fog.
+  //
+  //  4. LIGHTING:
+  //     Single backlight at upper-center. We ray-march 5 steps
+  //     toward the light and accumulate density (Beer–Lambert).
+  //     Result: dense regions stay dark, thin edges catch light,
+  //     partial beams peek through gaps — exactly stage fog.
+  //
+  //  5. MOUSE:
+  //     Adds a small time-lagged velocity bias to the drift
+  //     vector — perturbs airflow, doesn't warp geometry.
+  // ══════════════════════════════════════════════════════════
+  const smokeFrag = /* glsl */`
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec2  uRes;
+    uniform vec2  uMouse;
+    uniform vec2  uMvel;
+    uniform float uMwake;
+    uniform float uTransition; // unused, kept for compat
+    uniform float uT;          // 0→1 engulf, 1→0 reveal — single continuous value
+    uniform float uPhase;      // 0 = engulf direction, 1 = reveal direction
+
+    varying vec2 vUv;
+
+    vec3 mod289v3(vec3 x){ return x - floor(x*(1./289.))*289.; }
+    vec4 mod289v4(vec4 x){ return x - floor(x*(1./289.))*289.; }
+    vec4 perm(vec4 x){ return mod289v4(((x*34.)+1.)*x); }
+    vec4 tiSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314*r; }
+
+    float sn(vec3 v){
+      const vec2 C = vec2(1./6.,1./3.);
+      const vec4 D = vec4(0.,.5,1.,2.);
+      vec3 i  = floor(v + dot(v,C.yyy));
+      vec3 x0 = v - i + dot(i,C.xxx);
+      vec3 g  = step(x0.yzx,x0.xyz);
+      vec3 l  = 1.0-g;
+      vec3 i1 = min(g.xyz,l.zxy);
+      vec3 i2 = max(g.xyz,l.zxy);
+      vec3 x1 = x0-i1+C.xxx; vec3 x2 = x0-i2+C.yyy; vec3 x3 = x0-D.yyy;
+      i = mod289v3(i);
+      vec4 p = perm(perm(perm(
+        i.z+vec4(0.,i1.z,i2.z,1.))+
+        i.y+vec4(0.,i1.y,i2.y,1.))+
+        i.x+vec4(0.,i1.x,i2.x,1.));
+      float n_=0.142857142857;
+      vec3 ns=n_*D.wyz-D.xzx;
+      vec4 j=p-49.0*floor(p*ns.z*ns.z);
+      vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+      vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy;
+      vec4 h=1.0-abs(x)-abs(y);
+      vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+      vec4 s0=floor(b0)*2.+1.; vec4 s1=floor(b1)*2.+1.;
+      vec4 sh=-step(h,vec4(0.));
+      vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;
+      vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+      vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y);
+      vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+      vec4 nm=tiSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+      p0*=nm.x; p1*=nm.y; p2*=nm.z; p3*=nm.w;
+      vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
+      m=m*m;
+      return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+    }
+
+    float fbmH(vec3 p, int oct, float lx, float ly){
+      float v=0., a=0.52, f=1.;
+      for(int i=0;i<7;i++){
+        if(i>=oct) break;
+        v += a*sn(vec3(p.x*f*lx, p.y*f*ly, p.z*f));
+        f*=2.01; a*=0.50;
+      }
+      return v;
+    }
+
+    // LOCAL mouse disturbance only.
+    // Gaussian falloff (sigma=0.09) around cursor.
+    // Zero influence at any point outside ~3 sigma.
+    // Direction = mouse velocity so it reads as displaced air.
+    vec2 localDisturb(vec2 uv){
+      if(uMouse.x < -0.5) return vec2(0.0);
+      float dist  = length(uv - uMouse);
+      float gauss = exp(-dist*dist/(2.0*0.09*0.09));
+      float speed = length(uMvel);
+      float mag   = (speed*0.45 + uMwake*0.10) * gauss;
+      vec2 dir = (speed > 0.0008)
+        ? normalize(uMvel)
+        : normalize(uv - uMouse + vec2(0.0001));
+      return dir * mag;
+    }
+
+    float densityAt(vec2 uv, float t){
+      vec2 drift   = vec2(t*0.016, t*0.003);
+      vec2 disturb = localDisturb(uv);
+      vec3 base    = vec3(uv + drift + disturb, t*0.007);
+
+      // Layer A: large-scale horizontal structural masses
+      // Lower freq = bigger forms, clearly readable shapes
+      float A = fbmH(base*0.48, 5, 1.0, 0.30);
+
+      // Layer B: medium folds — domain-warped for irregular breakup
+      // Separate seed offsets ensure B looks independent of A
+      float wX = sn(base*0.90+vec3(3.1,1.7,0.4))*0.20;
+      float wY = sn(base*0.90+vec3(8.3,2.4,1.1))*0.09;
+      vec3  wb = base + vec3(wX,wY,0.0);
+      float B  = fbmH(wb*1.55, 6, 1.0, 0.52);
+
+      // Layer C: fine surface wisps — higher freq, own phase offset
+      // Contributes feathery edges and foreground texture
+      float C  = fbmH(wb*4.4+vec3(1.3,0.7,0.9), 4, 1.0, 0.68);
+
+      return A*0.50 + B*0.36 + C*0.14;
+    }
+
+    // Beer-Lambert extinction toward light — 6 steps for better breakup
+    float transmittance(vec2 uv, float t, vec2 ldir){
+      float tau = 0.0;
+      for(int i=1; i<=6; i++){
+        float d = densityAt(uv + ldir*0.048*float(i), t);
+        // Moderate extinction — allows partial beams through thinner regions
+        tau += max(0.0, d*0.5+0.5) * 0.36;
+      }
+      return exp(-tau);
+    }
+
+    void main(){
+      vec2  uv     = vUv;
+      float aspect = uRes.x/uRes.y;
+      vec2  aUv    = vec2(uv.x*aspect, uv.y);
+      float t      = uTime;
+
+      // ── Three spatially separated density layers ──────
+      // Each layer has its own threshold range and weight so they
+      // read as genuinely separate depths, not one blurred mass.
+
+      float raw = densityAt(aUv, t);
+      float d   = raw*0.5+0.5;
+
+      // Layer 1 — background haze: lowest threshold, very faint
+      // Gives the sense of atmosphere behind everything else
+      float haze = smoothstep(0.34, 0.60, d) * 0.22;
+
+      // Layer 2 — main smoke body: mid threshold, full opacity
+      // This is where the bulk of visible structure lives
+      float body = smoothstep(0.50, 0.76, d);
+
+      // Layer 3 — foreground wisps: tightest threshold, separate field
+      // Different UV scale + phase = parallax-like depth separation
+      float raw2 = densityAt(aUv*1.42 + vec2(0.32*aspect, 0.14), t*1.06);
+      float wisp = smoothstep(0.56, 0.80, raw2*0.5+0.5) * 0.52;
+
+      // Layer 4 — fine detail on the body: adds internal structure
+      // Stops the body from reading as one flat shape
+      float raw3 = densityAt(aUv*2.1  + vec2(0.18*aspect, 0.28), t*0.92);
+      float detail = smoothstep(0.58, 0.82, raw3*0.5+0.5) * 0.35;
+
+      // ── Density combine ───────────────────────────────
+      float den = haze;
+      den = den + body   * (1.0-den);
+      den = den + wisp   * (1.0-den) * 0.7;
+      den = den + detail * (1.0-den) * 0.5;
+      den = clamp(den, 0.0, 1.0);
+
+      // Contrast curve: pow(1.6) — between the flat 1.45 and the crushing 1.9.
+      // Darkens midtones while preserving the grey gradient range that gives
+      // smoke its three-dimensional read. The key: apply AFTER combining layers
+      // so each layer's internal variation is already baked in before darkening.
+      den = pow(den, 1.62);
+
+
+      // ── Centre suppression ────────────────────────────
+      float centreR    = length(aUv - vec2(0.52*aspect, 0.55));
+      float centreMask = exp(-centreR * centreR * 2.8);
+      den = den * (1.0 - centreMask * 0.12);
+
+
+      // ── Lighting ──────────────────────────────────────
+      vec2  lpos   = vec2(0.52*aspect, 0.76);
+      vec2  ldir   = normalize(lpos - aUv);
+      float ldist  = length(lpos - aUv);
+
+      // Tighter falloff — smaller lit zone, light stays concentrated
+      float falloff = 1.0 / (1.0 + ldist*ldist*1.8);
+
+      float trans   = transmittance(aUv, t, ldir*0.85);
+
+      // Secondary fill — kept very faint to preserve shadow depth
+      vec2  lpos2    = vec2(0.20*aspect, 0.22);
+      float ldist2   = length(lpos2 - aUv);
+      float falloff2 = 1.0 / (1.0 + ldist2*ldist2*3.5);
+      float trans2   = transmittance(aUv, t, normalize(lpos2-aUv)*0.6);
+      float fill     = trans2 * falloff2 * 0.07;   // dimmer than before
+
+      // pow(3.8): only the very thinnest wisp edges catch light — no broad halos
+      float scatter = pow(clamp(1.0-den, 0.0, 1.0), 2.4)
+                    * falloff * trans * 0.90;
+
+      // Transmitted: light through genuine voids
+      float transm  = trans * falloff * den * 0.28;
+
+      // Self-lit: removed — was contributing to the foggy centre feel
+      float lit = scatter*0.70 + transm*0.16 + fill*0.08;
+
+      // Contrast boost on lit: sharpen the difference between lit/unlit smoke
+      // This is what makes highlights feel small and precious rather than diffuse
+      lit = pow(lit, 1.18);
+
+      // ── Colour ramp ───────────────────────────────────
+      // Pulled down overall: cSmoke and cLit are darker than last revision
+      // so most visible smoke sits in the dark charcoal range, not mid-grey.
+      // cCore is unchanged — keeps the sharp beam highlights bright.
+      vec3 cVoid  = vec3(0.000, 0.000, 0.000);
+      vec3 cDense = vec3(0.028, 0.026, 0.022);   // near-black charcoal
+      vec3 cSmoke = vec3(0.085, 0.080, 0.070);   // dark smoke body (–35% vs before)
+      vec3 cLit   = vec3(0.38,  0.34,  0.29);    // lit edge (–24% vs before)
+      vec3 cCore  = vec3(0.80,  0.75,  0.66);    // beam core — stays bright
+
+      vec3 col = mix(cVoid,  cDense, den);
+      col = mix(col, cSmoke, clamp(den*(0.22 + lit*0.75),    0.0, 1.0));
+      col = mix(col, cLit,   clamp(lit*lit*3.5,              0.0, 1.0));
+      col = mix(col, cCore,  clamp(scatter*scatter*10.0,     0.0, 1.0));
+
+      // ── Transition overlay ────────────────────────────
+      // Single uniform uT drives the whole transition: 0→1 (engulf) then 1→0 (reveal).
+      // One noise field, sampled once. Coverage = noise > threshold.
+      // Threshold sweeps down during engulf, up during reveal.
+      // Directional bias: engulf biases by uv.x (left first),
+      //                   reveal biases by (1-uv.y) (top first/bottom last).
+      // uPhase: 0 = engulf direction, 1 = reveal direction.
+
+      if(uT > 0.0){
+        float tSpeed = t * 0.38;
+        vec3  tBase  = vec3(uv * 1.6 + vec2(0.4, 0.9), tSpeed);
+
+        float tN  = sn(tBase)                              * 0.50;
+        tN       += sn(tBase * 2.1 + vec3(1.3, 2.7, 0.5)) * 0.32;
+        tN       += sn(tBase * 4.3 + vec3(3.1, 0.8, 1.2)) * 0.18;
+        // tN is ~-1..1
+
+        float bias, thresh, tCoverage;
+
+        if(uPhase < 0.5){
+          // Engulf: smoke rolls in from left. Left pixels covered first.
+          bias      = uv.x * 0.55;
+          // uT 0→1: threshold sweeps from +1.3 (nothing) to -1.3 (everything)
+          thresh    = 1.3 - uT * 2.6 + bias;
+        } else {
+          // Reveal: smoke retreats downward. Top pixels clear first.
+          bias      = (1.0 - uv.y) * 0.55;
+          // uT 1→0: threshold sweeps from -1.3 (everything) back to +1.3 (nothing)
+          thresh    = 1.3 - uT * 2.6 + bias;
+        }
+
+        tCoverage = smoothstep(thresh, thresh + 0.18, tN);
+
+        if(tCoverage > 0.002){
+          float body1 = sn(tBase * 0.85 + vec3(5.2, 0.3, 0.8)) * 0.5 + 0.5;
+          float body2 = sn(tBase * 1.60 + vec3(0.4, 3.1, 2.0)) * 0.5 + 0.5;
+          vec3 tSmoke = mix(vec3(0.0), vec3(0.025, 0.022, 0.018), body1 * 0.55);
+          tSmoke      = mix(tSmoke,    vec3(0.012, 0.010, 0.008), body2 * 0.35);
+
+          float rimStr = tCoverage * (1.0 - tCoverage) * 4.0;
+          vec3  rim    = vec3(0.42, 0.36, 0.28) * rimStr * 0.65;
+
+          float alpha = pow(tCoverage, 0.55);
+          col = mix(col, tSmoke, alpha);
+          col += rim;
+        }
+      }
+
+      float vd  = length(uv - vec2(0.5))*1.45;
+      float vig = 1.0 - smoothstep(0.30, 1.0, vd);
+      col *= vig*vig;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+  const smokeUniforms = {
+    uTime:       { value: 0.0 },
+    uRes:        { value: new THREE.Vector2(W, H) },
+    uMouse:      { value: new THREE.Vector2(-2.0, -2.0) },
+    uMvel:       { value: new THREE.Vector2(0.0,  0.0)  },
+    uMwake:      { value: 0.0 },
+    uTransition: { value: 0.0 },
+    uT:          { value: 0.0 },  // 0→1 engulf, 1→0 reveal
+    uPhase:      { value: 0.0 }   // 0=engulf, 1=reveal
+  };
+
+  const smokeMat = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: smokeFrag,
+    uniforms: smokeUniforms, depthTest: false, depthWrite: false
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  PASS 2 — VOLUMETRIC LIGHT SHAFT
+  //  Radial blur from the light source position creates
+  //  the "god ray" beam effect visible through smoke gaps.
+  //  This is purely additive and stays soft/diffused.
+  // ══════════════════════════════════════════════════════════
+  const shaftFrag = /* glsl */`
+    precision mediump float;
+    uniform sampler2D tSmoke;
+    uniform vec2 uLightPos;
+    varying vec2 vUv;
+
+    void main(){
+      vec2 uv    = vUv;
+      // 18-sample radial blur — more samples = smoother beam gradient
+      vec2 delta = (uv - uLightPos) / 18.0;
+      vec4 acc   = vec4(0.0);
+      float wSum = 0.0;
+      for(int i=0; i<18; i++){
+        float ft = float(i)/17.0;
+        // Stronger taper: inner samples weight more, beam decays outward
+        float w = pow(1.0 - ft*0.85, 1.8);
+        acc  += texture2D(tSmoke, uv - delta*float(i)) * w;
+        wSum += w;
+      }
+      acc /= wSum;
+
+      float lum = dot(acc.rgb, vec3(0.2126, 0.7152, 0.0722));
+      // Higher threshold: only genuine bright scatter forms beams
+      // This prevents the charcoal smoke mass from bleeding into the shaft
+      float mask = smoothstep(0.22, 0.52, lum);
+
+      // Tighter radial falloff — beam dies off more quickly from source
+      // This is what prevents the "one big central glow blob" effect
+      float dist    = length(uv - uLightPos);
+      float radFall = 1.0 - smoothstep(0.0, 0.65, dist);
+      radFall = radFall * radFall;  // squared = steeper falloff
+
+      // Final shaft contribution: kept modest so beams are accents not fills
+      gl_FragColor = vec4(acc.rgb * mask * radFall * 0.32, 1.0);
+    }
+  `;
+
+  const shaftMat = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: shaftFrag,
+    uniforms: {
+      tSmoke:    { value: null },
+      uLightPos: { value: new THREE.Vector2(0.52, 0.78) }
+    },
+    depthTest: false, depthWrite: false
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  PASS 3 — BRIGHT-PASS
+  //  Extract only the lit scatter regions for bloom.
+  //  Low threshold so even faint wisps bloom softly.
+  // ══════════════════════════════════════════════════════════
+  const briteFrag = /* glsl */`
+    precision mediump float;
+    uniform sampler2D tInput;
+    varying vec2 vUv;
+    void main(){
+      vec4  c  = texture2D(tInput, vUv);
+      float lm = dot(c.rgb, vec3(0.2126,0.7152,0.0722));
+      // Only pixels above 0.30 luminance contribute to bloom
+      // This keeps it out of the charcoal mid-tones
+      float t  = smoothstep(0.30, 0.60, lm);
+      gl_FragColor = vec4(c.rgb * t, 1.0);
+    }
+  `;
+
+  const briteMat = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: briteFrag,
+    uniforms: { tInput: { value: null } },
+    depthTest: false, depthWrite: false
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  PASSES 4 & 5 — WIDE SEPARABLE GAUSSIAN BLUR
+  //  Large sigma (σ≈3) for atmospheric soft bloom, not sharp rings
+  // ══════════════════════════════════════════════════════════
+  const blurFrag = /* glsl */`
+    precision mediump float;
+    uniform sampler2D tInput;
+    uniform vec2 uDir;
+    uniform vec2 uRes;
+    varying vec2 vUv;
+    void main(){
+      vec2  t = uDir / uRes;
+      vec4  c = vec4(0.0);
+      // 13-tap weights  σ≈3.0
+      float w[7];
+      w[0]=0.1965; w[1]=0.1764; w[2]=0.1216; w[3]=0.0680;
+      w[4]=0.0307; w[5]=0.0107; w[6]=0.0029;
+      c += texture2D(tInput, vUv) * w[0];
+      for(int i=1;i<7;i++){
+        c += texture2D(tInput, vUv + t*float(i)) * w[i];
+        c += texture2D(tInput, vUv - t*float(i)) * w[i];
+      }
+      gl_FragColor = c;
+    }
+  `;
+
+  const blurH = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: blurFrag,
+    uniforms: {
+      tInput: { value: null },
+      uDir:   { value: new THREE.Vector2(1, 0) },
+      uRes:   { value: new THREE.Vector2(W * DPR, H * DPR) }
+    }, depthTest: false, depthWrite: false
+  });
+
+  const blurV = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: blurFrag,
+    uniforms: {
+      tInput: { value: null },
+      uDir:   { value: new THREE.Vector2(0, 1) },
+      uRes:   { value: new THREE.Vector2(W * DPR, H * DPR) }
+    }, depthTest: false, depthWrite: false
+  });
+
+  // ══════════════════════════════════════════════════════════
+  //  PASS 6 — COMPOSITE
+  //  Smoke + light shaft + soft bloom → screen
+  //  Tone-map last: dark smoke preserves deep blacks,
+  //  bright scatter stays warm without clipping to white
+  // ══════════════════════════════════════════════════════════
+  const compFrag = /* glsl */`
+    precision mediump float;
+    uniform sampler2D tSmoke;
+    uniform sampler2D tShaft;
+    uniform sampler2D tBloom;
+    varying vec2 vUv;
+    void main(){
+      vec3 smoke = texture2D(tSmoke, vUv).rgb;
+      vec3 shaft = texture2D(tShaft, vUv).rgb;
+      vec3 bloom = texture2D(tBloom, vUv).rgb;
+
+      // Overall exposure reduced: shaft and bloom trimmed back
+      // Beam still readable but doesn't fill the frame
+      vec3 col = smoke
+               + shaft * 0.30
+               + bloom * 0.60;
+
+      // Exposure scale: multiply before tone-map to darken linearly
+      // 0.72 ≈ 28% reduction in scene brightness
+      col *= 0.72;
+
+      // Tone-map: knee at 0.48 (darker than 0.52, preserves structure)
+      col = col / (col + vec3(0.48));
+
+      // Slight gamma push toward dark — 0.94 is more neutral than 0.90
+      // so mid-smoke structure isn't lifted back up after exposure cut
+      col = pow(col, vec3(0.94));
+
+      // Hard black floor — unchanged
+      float lum = dot(col, vec3(0.2126,0.7152,0.0722));
+      col *= smoothstep(0.004, 0.045, lum);
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  const compMat = new THREE.ShaderMaterial({
+    vertexShader: vert, fragmentShader: compFrag,
+    uniforms: {
+      tSmoke: { value: null },
+      tShaft: { value: null },
+      tBloom: { value: null }
+    }, depthTest: false, depthWrite: false
+  });
+
+  // ── Resize ────────────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    W = window.innerWidth; H = window.innerHeight;
+    renderer.setSize(W, H);
+    const rW = Math.floor(W * DPR), rH = Math.floor(H * DPR);
+    [rtSmoke, rtShaft, rtBrite, rtBlurA, rtBlurB].forEach(rt => rt.setSize(rW, rH));
+    smokeUniforms.uRes.value.set(W, H);
+    blurH.uniforms.uRes.value.set(rW, rH);
+    blurV.uniforms.uRes.value.set(rW, rH);
+  });
+
+  // ── Transition state machine ──────────────────────────────
+  // Total duration: ~750ms
+  //   ENGULF  300ms: uEngulf 0→1   smoke rolls in from left
+  //   PEAK     80ms: both at max   content swaps here
+  //   REVEAL  370ms: uReveal 1→0   smoke retreats downward
+  //
+  // Text opacity tracks the smoke coverage so text is always
+  // hidden when the screen is covered and visible when it's clear.
+  window._smokeTransition = {
+    phase:     'idle',
+    startTime: 0,
+    ENGULF_MS: 1800,  // smoke rolls in from left — slow and heavy
+    PEAK_MS:   300,   // held fully covered — content swaps here
+    REVEAL_MS: 1600,  // smoke retreats downward — slow reveal
+    onPeak:    null
+  };
+
+  // ── Render loop ───────────────────────────────────────────
+  const t0 = performance.now();
+
+  (function loop() {
+    requestAnimationFrame(loop);
+
+    const now     = performance.now();
+    const elapsed = (now - t0) * 0.001;
+    const ST      = window._smokeTransition;
+
+    // Smooth cursor
+    mousePosSmooth.x += (mousePos.x - mousePosSmooth.x) * 0.06;
+    mousePosSmooth.y += (mousePos.y - mousePosSmooth.y) * 0.06;
+    mvel.x *= 0.82;
+    mvel.y *= 0.82;
+    mwake  *= 0.96;
+
+    // ── Transition timeline ──────────────────────────────
+    // uT: single value, 0→1 during engulf, 1→0 during reveal.
+    // uPhase: 0 during engulf (left-bias), 1 during reveal (bottom-bias).
+    // Text: hidden whenever uT > 0.02 (smoke is covering screen).
+    //       Outgoing text hidden as smoke rises. Incoming text only
+    //       shown once smoke is nearly gone (uT < 0.02 on reveal end).
+
+    let uT    = 0.0;
+    let uPh   = 0.0;
+    let textOut = 0.0;
+    let textIn  = 0.0;
+
+    if (ST.phase === 'engulf') {
+      const p = Math.min(1.0, (now - ST.startTime) / ST.ENGULF_MS);
+      const ep = p * p * p;      // cubic ease-in: slow start, fast finish
+      uT      = ep;
+      uPh     = 0.0;             // engulf direction
+      textOut = 1.0 - p;         // outgoing text fades as smoke rises
+      textIn  = 0.0;
+
+      if (p >= 1.0) {
+        ST.phase     = 'peak';
+        ST.startTime = now;
+        if (ST.onPeak) { ST.onPeak(); ST.onPeak = null; }
+      }
+
+    } else if (ST.phase === 'peak') {
+      uT      = 1.0;
+      uPh     = 0.0;
+      textOut = 0.0;
+      textIn  = 0.0;
+
+      if (now - ST.startTime >= ST.PEAK_MS) {
+        ST.phase     = 'reveal';
+        ST.startTime = now;
+      }
+
+    } else if (ST.phase === 'reveal') {
+      const p = Math.min(1.0, (now - ST.startTime) / ST.REVEAL_MS);
+      const rp = 1.0 - p * p;   // ease-out: fast start, slow finish
+      uT      = rp;
+      uPh     = 1.0;             // reveal direction (bottom-biased)
+      textOut = 0.0;
+      // Text only appears when smoke coverage is genuinely gone.
+      // uT < ~0.15 means threshold is above most of the noise range.
+      // We gate on p > 0.85 (last 15% of reveal, ~240ms).
+      textIn  = Math.max(0.0, (p - 0.85) / 0.15);
+
+      if (p >= 1.0) {
+        ST.phase = 'idle';
+        uT       = 0.0;
+        textIn   = 1.0;
+      }
+    }
+
+    smokeUniforms.uTime.value       = elapsed;
+    smokeUniforms.uMouse.value.set(mousePosSmooth.x, mousePosSmooth.y);
+    smokeUniforms.uMvel.value.set(mvel.x, mvel.y);
+    smokeUniforms.uMwake.value      = mwake;
+    smokeUniforms.uTransition.value = 0.0;
+    smokeUniforms.uT.value          = uT;
+    smokeUniforms.uPhase.value      = uPh;
+
+    // Text opacity — all screens
+    document.querySelectorAll('.screen').forEach(s => {
+      if (s.classList.contains('outgoing')) {
+        s.style.opacity = String(textOut.toFixed(3));
+      } else if (s.classList.contains('active')) {
+        s.style.opacity = ST.phase === 'idle' ? '1' : String(textIn.toFixed(3));
+      } else {
+        s.style.opacity = '0';
+      }
+    });
+
+    // Render passes
+    pass(smokeMat, rtSmoke);
+
+    shaftMat.uniforms.tSmoke.value = rtSmoke.texture;
+    pass(shaftMat, rtShaft);
+
+    briteMat.uniforms.tInput.value = rtSmoke.texture;
+    pass(briteMat, rtBrite);
+
+    blurH.uniforms.tInput.value = rtBrite.texture;
+    pass(blurH, rtBlurA);
+    blurV.uniforms.tInput.value = rtBlurA.texture;
+    pass(blurV, rtBlurB);
+
+    compMat.uniforms.tSmoke.value = rtSmoke.texture;
+    compMat.uniforms.tShaft.value = rtShaft.texture;
+    compMat.uniforms.tBloom.value = rtBlurB.texture;
+    pass(compMat, null);
+  })();
+
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+//  SCREEN NAVIGATION
+//
+//  Transition sequence (no veil, no fade-to-black):
+//    1. goTo(n) called
+//    2. Tag current screen 'outgoing', set ST.phase = 'engulf'
+//    3. Render loop ramps uTransition 0→1, outgoing text opacity 1→0
+//    4. At peak (uTransition=1): swap — remove outgoing, add active on new screen
+//    5. ST.phase = 'reveal': uTransition ramps 1→0, incoming text opacity 0→1
+//    6. Idle: transition complete, smoke returns to normal
+//
+//  Text is always in sync with smoke — no CSS transitions involved.
+// ══════════════════════════════════════════════════════════════
+(function() {
+
+  let cur   = 0;
+  const TOTAL   = 5;
+  const screens = document.querySelectorAll('.screen');
+  const dots    = document.querySelectorAll('.pd');
+  let busy      = false;
+
+  const DIST_THRESHOLD  = 420;
+  const SPEED_THRESHOLD = 2.2;
+  const BUILD_MS        = 480;
+  const COOLDOWN_MS     = 4200;  // 1800+300+1600+500 buffer
+  let lastTransition    = 0;
+
+  // Set initial screen visible
+  screens[cur].style.opacity = '1';
+  screens[cur].classList.add('active');
+
+  // ── CSS resistance effect ────────────────────────────────
+  const resistStyle = document.createElement('style');
+  resistStyle.textContent = `
+    .screen.pulling {
+      transform: scale(1.012);
+      filter: blur(0.4px);
+      transition: transform 0.5s cubic-bezier(.2,0,.4,1),
+                  filter    0.5s ease;
+    }
+  `;
+  document.head.appendChild(resistStyle);
+
+  // ── Core transition ───────────────────────────────────────
+  function goTo(n) {
+    if (busy || n === cur || n < 0 || n >= TOTAL) return;
+    const now = Date.now();
+    if (now - lastTransition < COOLDOWN_MS) return;
+    lastTransition = now;
+    busy = true;
+
+    const ST    = window._smokeTransition;
+    const fromN = cur;
+    const toN   = n;
+
+    // Release any pull resistance
+    screens[fromN].classList.remove('pulling');
+
+    // Tag outgoing screen
+    screens[fromN].classList.add('outgoing');
+    screens[fromN].classList.remove('active');
+
+    // Sweep directions:
+    // Engulf sweeps in the direction of navigation (forward = left-to-right)
+    // Reveal sweeps from the OPPOSITE side — smoke clears away from where it came
+    // Direction no longer needed — fixed left-in/bottom-out in shader
+
+
+    // Register peak callback — fires at smoke maximum
+    ST.onPeak = () => {
+      // Swap content while screen is fully black under smoke
+      screens[fromN].classList.remove('outgoing');
+      screens[fromN].style.opacity = '0';
+      cur = toN;
+      screens[toN].classList.add('active');
+      dots[fromN].classList.remove('on');
+      dots[toN].classList.add('on');
+      setTimeout(() => { busy = false; }, ST.REVEAL_MS + 400);
+    };
+
+    // Start smoke engulf
+    // Start engulf
+    ST.phase     = 'engulf';
+    ST.startTime = performance.now();
+  }
+
+  const next = () => goTo(cur + 1);
+  const prev = () => goTo(cur - 1);
+
+  // ── Mouse: deliberate pull system ─────────────────────────
+  let navAcc        = 0;
+  let navLX         = null;
+  let navLY         = null;
+  let pullStartTime = null;
+  let pulling       = false;
+  let pullTimer     = null;
+
+  function cancelPull() {
+    pulling = false;
+    pullStartTime = null;
+    clearTimeout(pullTimer);
+    if (screens[cur]) screens[cur].classList.remove('pulling');
+  }
+
+  function resetNavAcc() { navAcc = 0; cancelPull(); }
+
+  document.addEventListener('mousemove', e => {
+    if (busy) return;
+    if (navLX === null) { navLX = e.clientX; navLY = e.clientY; return; }
+    const dx   = e.clientX - navLX;
+    const dy   = e.clientY - navLY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    navLX = e.clientX; navLY = e.clientY;
+    if (dist < SPEED_THRESHOLD) return;
+    navAcc += dist;
+    if (!pulling && navAcc > DIST_THRESHOLD) {
+      pulling = true;
+      pullStartTime = Date.now();
+      if (screens[cur]) screens[cur].classList.add('pulling');
+    }
+    if (pulling) {
+      clearTimeout(pullTimer);
+      if (Date.now() - pullStartTime >= BUILD_MS) {
+        const now = Date.now();
+        if (now - lastTransition >= COOLDOWN_MS) {
+          resetNavAcc();
+          next();
+        }
+      } else {
+        pullTimer = setTimeout(cancelPull, 300);
+      }
+    }
+  });
+
+  document.addEventListener('mouseleave', resetNavAcc);
+
+  // ── Click / tap ───────────────────────────────────────────
+  document.addEventListener('click', e => {
+    if (e.target.closest('a') || e.target.closest('.pd')) return;
+    const now = Date.now();
+    if (now - lastTransition < COOLDOWN_MS) return;
+    next();
+  });
+
+  // ── Keyboard ─────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+    if (['ArrowLeft','ArrowUp'].includes(e.key))        { e.preventDefault(); prev(); }
+  });
+
+  // ── Scroll wheel ─────────────────────────────────────────
+  let wCD = 0;
+  document.addEventListener('wheel', e => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - wCD < COOLDOWN_MS) return;
+    if (Math.abs(e.deltaY) < 30) return;
+    wCD = now;
+    e.deltaY > 0 ? next() : prev();
+  }, { passive: false });
+
+  // ── Touch swipe ──────────────────────────────────────────
+  let tY = 0, tX = 0, tT = 0;
+  document.addEventListener('touchstart', e => {
+    tY = e.touches[0].clientY;
+    tX = e.touches[0].clientX;
+    tT = Date.now();
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    const dy   = tY - e.changedTouches[0].clientY;
+    const dx   = tX - e.changedTouches[0].clientX;
+    const dt   = Math.max(1, Date.now() - tT);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const vel  = dist / dt;
+    if (dist < 12 && dt < 300) {
+      const now = Date.now();
+      if (now - lastTransition >= COOLDOWN_MS) { lastTransition = now; next(); }
+      return;
+    }
+    if (vel > 0.3 && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 55) {
+      const now = Date.now();
+      if (now - lastTransition >= COOLDOWN_MS) {
+        lastTransition = now;
+        dy > 0 ? next() : prev();
+      }
+    }
+  }, { passive: true });
+
+  // ── Shake ─────────────────────────────────────────────────
+  let lShk = 0;
+  if (window.DeviceMotionEvent) {
+    window.addEventListener('devicemotion', e => {
+      const a = e.acceleration; if (!a) return;
+      const m = Math.sqrt((a.x||0)**2 + (a.y||0)**2 + (a.z||0)**2);
+      const now = Date.now();
+      if (m > 18 && now - lShk > 2500) { lShk = now; next(); }
+    });
+  }
+
+  // ── Progress dots ─────────────────────────────────────────
+  dots.forEach(d => d.addEventListener('click', e => {
+    e.stopPropagation();
+    goTo(+d.dataset.i);
+  }));
+
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+//  GHOST IDLE MESSAGES
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const msgs = [
+    'Look closer.',
+    'Still watching?',
+    'Discipline reveals more.',
+    'The structure is already there.',
+    'Patience is the edge.'
+  ];
+  const gEl  = document.getElementById('ghost');
+  let gIdx = 0, gTimer, gOut = false;
+
+  function resetIdle() {
+    clearTimeout(gTimer);
+    if (gOut) { gEl.style.opacity = '0'; gOut = false; }
+    gTimer = setTimeout(showGhost, 9000);
+  }
+  function showGhost() {
+    gEl.textContent  = msgs[gIdx++ % msgs.length];
+    gEl.style.opacity = '1'; gOut = true;
+    setTimeout(() => {
+      gEl.style.opacity = '0'; gOut = false;
+      gTimer = setTimeout(showGhost, 16000);
+    }, 5000);
+  }
+  ['mousemove','touchstart','click','keydown','wheel'].forEach(ev =>
+    document.addEventListener(ev, resetIdle, { passive: true })
+  );
+  resetIdle();
+})();
+
+
+// ══════════════════════════════════════════════════════════════
+//  CUSTOM CURSOR
+// ══════════════════════════════════════════════════════════════
+(function() {
+  const dot  = document.getElementById('cur');
+  const ring = document.getElementById('cur-r');
+  let cX = -100, cY = -100, rX = -100, rY = -100;
+
+  document.addEventListener('mousemove', e => { cX = e.clientX; cY = e.clientY; });
+
+  (function animC() {
+    rX += (cX - rX) * 0.09;
+    rY += (cY - rY) * 0.09;
+    dot.style.left  = cX + 'px'; dot.style.top  = cY + 'px';
+    ring.style.left = rX + 'px'; ring.style.top = rY + 'px';
+    requestAnimationFrame(animC);
+  })();
+
+  document.addEventListener('mousedown', () => {
+    dot.style.transform  = 'translate(-50%,-50%) scale(1.5)';
+    ring.style.opacity   = '.5';
+    ring.style.transform = 'translate(-50%,-50%) scale(.75)';
+  });
+  document.addEventListener('mouseup', () => {
+    dot.style.transform  = 'translate(-50%,-50%) scale(1)';
+    ring.style.opacity   = '1';
+    ring.style.transform = 'translate(-50%,-50%) scale(1)';
+  });
+
+  if ('ontouchstart' in window) {
+    dot.style.display  = 'none';
+    ring.style.display = 'none';
+    document.body.style.cursor = 'auto';
+  }
+})();
+</script>
+</body>
+</html>
