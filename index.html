@@ -1044,31 +1044,18 @@ html, body {
   // ── Core transition ───────────────────────────────────────
   function goTo(n) {
     if (busy || n === cur || n < 0 || n >= TOTAL) return;
-    const now = Date.now();
-    if (now - lastTransition < COOLDOWN_MS) return;
-    lastTransition = now;
     busy = true;
+    lastTransition = Date.now();
 
     const ST    = window._smokeTransition;
     const fromN = cur;
     const toN   = n;
 
-    // Release any pull resistance
     screens[fromN].classList.remove('pulling');
-
-    // Tag outgoing screen
     screens[fromN].classList.add('outgoing');
     screens[fromN].classList.remove('active');
 
-    // Sweep directions:
-    // Engulf sweeps in the direction of navigation (forward = left-to-right)
-    // Reveal sweeps from the OPPOSITE side — smoke clears away from where it came
-    // Direction no longer needed — fixed left-in/bottom-out in shader
-
-
-    // Register peak callback — fires at smoke maximum
     ST.onPeak = () => {
-      // Swap content while screen is fully black under smoke
       screens[fromN].classList.remove('outgoing');
       screens[fromN].style.opacity = '0';
       cur = toN;
@@ -1078,8 +1065,6 @@ html, body {
       setTimeout(() => { busy = false; }, ST.REVEAL_MS + 400);
     };
 
-    // Start smoke engulf
-    // Start engulf
     ST.phase     = 'engulf';
     ST.startTime = performance.now();
   }
@@ -1121,11 +1106,7 @@ html, body {
     if (pulling) {
       clearTimeout(pullTimer);
       if (Date.now() - pullStartTime >= BUILD_MS) {
-        const now = Date.now();
-        if (now - lastTransition >= COOLDOWN_MS) {
-          resetNavAcc();
-          next();
-        }
+        if (!busy) { resetNavAcc(); next(); }
       } else {
         pullTimer = setTimeout(cancelPull, 300);
       }
@@ -1140,9 +1121,8 @@ html, body {
   let lastTouch = 0;
   document.addEventListener('click', e => {
     if (e.target.closest('a') || e.target.closest('.pd')) return;
-    if (Date.now() - lastTouch < 600) return;  // was a touch, already handled
-    const now = Date.now();
-    if (now - lastTransition < COOLDOWN_MS) return;
+    if (Date.now() - lastTouch < 600) return;  // suppress synthetic click after touch
+    if (busy) return;
     next();
   });
 
@@ -1187,14 +1167,12 @@ html, body {
     const vel  = dist / dt;
 
     if (dist < 20 && dt < 400) {
-      lastTouchNav   = now;
-      lastTransition = now;
+      lastTouchNav = now;
       next();
       return;
     }
     if (vel > 0.25 && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 40) {
-      lastTouchNav   = now;
-      lastTransition = now;
+      lastTouchNav = now;
       dy > 0 ? next() : prev();
     }
   }, { passive: true });
