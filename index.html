@@ -210,9 +210,6 @@ html, body {
 <!-- Film grain overlay -->
 <div id="grain"></div>
 
-<!-- Cheshire smile — appears on s1 after transition, fades over 4s -->
-<canvas id="cheshire" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:0;transition:opacity 0.4s ease;"></canvas>
-
 <!-- Ghost idle message -->
 <div id="ghost">Look closer.</div>
 
@@ -1244,163 +1241,69 @@ html, body {
 
 
 // ══════════════════════════════════════════════════════════════
-//  CHESHIRE — cat grin + eyes in top-right, made of smoke wisps
-//  Shape: wide curved grin with upturned corners (like the image),
-//  two almond cat eyes above. All drawn as layered blurred strokes
-//  so it reads as smoke, not a cartoon.
+//  CHESHIRE — image-based, starts blurred, dissolves to nothing
 // ══════════════════════════════════════════════════════════════
 (function() {
-  const cv  = document.getElementById('cheshire');
-  const ctx = cv.getContext('2d');
-
-  function resize() {
-    cv.width  = window.innerWidth;
-    cv.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  // Draw the Cheshire face in the top-right corner.
-  // All dimensions are relative to viewport so it scales correctly.
-  function drawCheshire(alpha) {
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    if (alpha <= 0) return;
-
-    const W = cv.width, H = cv.height;
-
-    // Anchor: top-right corner, pushed inward so it's partially clipped
-    // by the vignette — sits in the dark border region
-    const ox = W * 0.82;   // horizontal centre of the face
-    const oy = H * 0.18;   // vertical centre of the face
-    const scale = Math.min(W, H) * 0.14;  // overall size
-
-    // ── GRIN ─────────────────────────────────────────────
-    // Smoke technique: NO sharp/thin passes — only wide blurry strokes
-    // stacked up. The key is that the sharpest pass has blur:8 minimum
-    // and very low alpha, so you never see a clean line — only a soft
-    // luminous cloud. More passes at different blur radii = more depth.
-    const gL  = ox - scale * 1.1;
-    const gR  = ox + scale * 1.1;
-    const gTy = oy + scale * 0.1;
-    const gCy = oy + scale * 0.72;
-
-    const cp1x = gL + scale * 0.5, cp1y = gCy + scale * 0.12;
-    const cp2x = gR - scale * 0.5, cp2y = gCy + scale * 0.12;
-
-    // Draw one shape through multiple blur passes — only soft blobs, no hard lines
-    const grinPasses = [
-      { blur: 38, a: 0.12, w: 80 },  // outermost glow halo
-      { blur: 20, a: 0.20, w: 50 },  // broad soft smoke mass
-      { blur: 10, a: 0.28, w: 28 },  // mid-density body
-      { blur:  5, a: 0.18, w: 14 },  // tighter but still very soft
-      // NO pass below blur:5 — that's what causes the laser line
-    ];
-
-    for (const p of grinPasses) {
-      ctx.save();
-      ctx.globalAlpha = alpha * p.a;
-      ctx.filter      = `blur(${p.blur}px)`;
-      ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
-      ctx.lineWidth   = p.w;
-      ctx.lineCap     = 'round';
-      ctx.lineJoin    = 'round';
-
-      ctx.beginPath();
-      ctx.moveTo(gL, gTy);
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, gR, gTy);
-      ctx.stroke();
-
-      // Corner curls
-      ctx.beginPath();
-      ctx.moveTo(gL, gTy);
-      ctx.quadraticCurveTo(gL - scale * 0.22, gTy - scale * 0.32,
-                           gL - scale * 0.06, gTy - scale * 0.52);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(gR, gTy);
-      ctx.quadraticCurveTo(gR + scale * 0.22, gTy - scale * 0.32,
-                           gR + scale * 0.06, gTy - scale * 0.52);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    // ── TEETH — very faint smoke smudges ─────────────────
-    const teethCount = 7;
-    for (let ti = 0; ti < teethCount; ti++) {
-      const tt = (ti + 0.5) / teethCount;
-      const tx = gL + (gR - gL) * tt;
-      const bt = tt;
-      const ty = (1-bt)*(1-bt)*(1-bt)*gTy
-               + 3*(1-bt)*(1-bt)*bt*(oy + scale * 0.5)
-               + 3*(1-bt)*bt*bt*(oy + scale * 0.5)
-               + bt*bt*bt*gTy;
-      ctx.save();
-      ctx.globalAlpha = alpha * 0.08;
-      ctx.filter = 'blur(8px)';  // teeth are smoke smudges, not lines
-      ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
-      ctx.lineWidth = 12;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + scale * 0.06);
-      ctx.lineTo(tx, ty + scale * 0.22);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // ── EYES — soft smoke ovals, no sharp outlines ────────
-    const eyeY   = oy - scale * 0.30;
-    const eyeSep = scale * 0.52;
-    const eyeW   = scale * 0.30;
-    const eyeH   = scale * 0.16;
-
-    const eyePasses = [
-      { blur: 22, a: 0.10, w: 36 },
-      { blur: 10, a: 0.18, w: 18 },
-      { blur:  5, a: 0.14, w:  8 },
-      // again: nothing sharper than blur:5
-    ];
-
-    for (const ex of [ox - eyeSep, ox + eyeSep]) {
-      for (const p of eyePasses) {
-        ctx.save();
-        ctx.globalAlpha = alpha * p.a;
-        ctx.filter      = `blur(${p.blur}px)`;
-        ctx.strokeStyle = 'rgba(235, 228, 215, 1.0)';
-        ctx.lineWidth   = p.w;
-        ctx.lineCap     = 'round';
-        ctx.beginPath();
-        ctx.moveTo(ex - eyeW, eyeY);
-        ctx.quadraticCurveTo(ex, eyeY - eyeH, ex + eyeW, eyeY);
-        ctx.quadraticCurveTo(ex, eyeY + eyeH, ex - eyeW, eyeY);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-  }
+  // Create an img element, position it top-right, animate it out
+  const img = new Image();
+  img.src = 'cheshire.png';
+  img.id  = 'cheshire-img';
+  img.style.cssText = `
+    position: fixed;
+    top: -4%;
+    right: -6%;
+    width: 38vmin;
+    height: auto;
+    pointer-events: none;
+    z-index: 4;
+    opacity: 0;
+    filter: blur(6px) brightness(0.72);
+    transition: none;
+    mix-blend-mode: screen;
+  `;
+  document.body.appendChild(img);
 
   window._triggerCheshire = function() {
-    const start    = performance.now();
-    const DURATION = 3800;  // shorter total
+    const FADE_IN_MS  = 600;
+    const HOLD_MS     = 1200;
+    const FADE_OUT_MS = 3200;
+    const start = performance.now();
 
-    function fade() {
-      const p = Math.min(1.0, (performance.now() - start) / DURATION);
-      // Fade in quickly, hold briefly, dissolve more quickly
-      let a;
-      if      (p < 0.15) a = p / 0.15;                    // 0.6s fade in
-      else if (p < 0.45) a = 1.0;                          // ~1.1s hold (was 0.65)
-      else               a = 1.0 - (p - 0.45) / 0.55;    // ~2.1s dissolve
+    function animate() {
+      const now = performance.now();
+      const elapsed = now - start;
+      const total = FADE_IN_MS + HOLD_MS + FADE_OUT_MS;
 
-      drawCheshire(a);
-      cv.style.opacity = '1';
-      if (p < 1.0) requestAnimationFrame(fade);
-      else {
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        cv.style.opacity = '0';
+      let opacity, blurPx;
+
+      if (elapsed < FADE_IN_MS) {
+        // Fade in — starts at blur:6, eases to blur:4
+        const p  = elapsed / FADE_IN_MS;
+        opacity  = p * p * 0.55;             // ease-in, max opacity ~0.55 (subtle)
+        blurPx   = 6 - p * 2;               // 6px → 4px
+      } else if (elapsed < FADE_IN_MS + HOLD_MS) {
+        // Hold — stays blurry so it never looks like a photo
+        opacity  = 0.55;
+        blurPx   = 4;
+      } else {
+        // Dissolve — opacity drops and blur increases so it smokes away
+        const p  = (elapsed - FADE_IN_MS - HOLD_MS) / FADE_OUT_MS;
+        const ep = 1.0 - (1.0 - p) * (1.0 - p);  // ease-in dissolve
+        opacity  = 0.55 * (1.0 - ep);
+        blurPx   = 4 + ep * 18;             // blur grows as it vanishes
+      }
+
+      img.style.opacity = String(Math.max(0, opacity).toFixed(3));
+      img.style.filter  = `blur(${blurPx.toFixed(1)}px) brightness(0.72)`;
+
+      if (elapsed < total) {
+        requestAnimationFrame(animate);
+      } else {
+        img.style.opacity = '0';
       }
     }
-    requestAnimationFrame(fade);
+
+    requestAnimationFrame(animate);
   };
 })();
 
@@ -1456,12 +1359,12 @@ html, body {
     // Line 1
     const line1 = document.createElement('div');
     line1.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;';
-    for (const id of ['THE','MARKET','NEVER','NEEDED','YOU']) {
-      const w = WORDS.find(x => x.id === id);
+    for (const id of ['THE','MARKET','NEVER','NEEDED','YOU1']) {
+      const w = id === 'YOU1' ? { text: 'YOU.' } : WORDS.find(x => x.id === id);
       const sp = document.createElement('span');
       sp.className   = 'hw';
       sp.dataset.wid = id;
-      sp.textContent = id === 'YOU' ? 'YOU.' : w.text;
+      sp.textContent = w.text;
       line1.appendChild(sp);
     }
     // Line 2
@@ -1519,7 +1422,7 @@ html, body {
     setTimeout(() => {
       // Fade out words that don't survive into the correct sentence (NEEDED2)
       // before doing the FLIP so they dissolve slowly rather than snap away
-      const fadingIds = ['NEEDED2'];
+      const fadingIds = ['NEEDED2', 'YOU1'];
       headline.querySelectorAll('.hw').forEach(el => {
         if (fadingIds.includes(el.dataset.wid)) {
           el.style.transition = 'opacity 1.4s ease';
