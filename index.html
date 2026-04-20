@@ -176,13 +176,51 @@ html, body {
 }
 .pd.on { background:rgba(220,212,200,.7); transform:scale(1.7); }
 
-/* s4 scramble words */
-.hw {
-  display:inline-block;
-  transition: transform 0.8s cubic-bezier(.4,0,.2,1),
-              opacity   0.5s ease;
+/* ── LITE MODE ───────────────────────────────────────────────
+   Applied when window.LITE = true (low-end hardware detected).
+   No WebGL, no grain, no custom cursor, simple CSS transitions. */
+body.lite {
+  cursor: auto;
+  /* Slow-breathing dark gradient replaces WebGL smoke */
+  background: radial-gradient(ellipse at 52% 60%, #1a1714 0%, #0a0908 55%, #020202 100%);
+  animation: lbg 8s ease-in-out infinite alternate;
+}
+@keyframes lbg {
+  0%   { background: radial-gradient(ellipse at 48% 58%, #1c1916 0%, #0a0908 55%, #020202 100%); }
+  50%  { background: radial-gradient(ellipse at 54% 64%, #221e1a 0%, #0d0b09 50%, #020202 100%); }
+  100% { background: radial-gradient(ellipse at 50% 55%, #181512 0%, #080706 55%, #020202 100%); }
+}
+body.lite #glcanvas,
+body.lite #grain,
+body.lite #cur,
+body.lite #cur-r { display: none !important; }
+
+/* Lite transitions: simple opacity crossfade */
+body.lite .screen {
+  transition: opacity 0.55s ease !important;
+}
+body.lite .screen.active { opacity: 1 !important; }
+
+/* Tap hint for lite mode */
+body.lite .hint { display: block; }
+body.lite #lite-hint {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 200;
+  font-size: 0.55rem;
+  letter-spacing: .45em;
+  text-transform: uppercase;
+  color: rgba(200,192,184,.22);
+  pointer-events: none;
+  animation: ph 3.5s ease-in-out infinite;
   white-space: nowrap;
 }
+
+/* Ghost idle text */
+#ghost {
   position:fixed; top:50%; left:50%;
   transform:translate(-50%,-50%);
   z-index:20;
@@ -213,6 +251,9 @@ html, body {
 <!-- Ghost idle message -->
 <div id="ghost">Look closer.</div>
 
+<!-- Lite mode tap hint -->
+<div id="lite-hint" style="display:none">Tap to continue</div>
+
 <!-- Progress indicator -->
 <div id="prog">
   <div class="pd on" data-i="0"></div>
@@ -228,7 +269,7 @@ html, body {
   <section class="screen active" id="s0">
     <img id="logo" src="logo.jpeg" alt="TH3FLOW FOREX" onerror="this.style.display='none'">
     <h1 class="hl">You don't see the market.<br>You see what you understand.</h1>
-    <span class="hint">Move to reveal</span>
+    <span class="hint">Tap to reveal</span>
   </section>
 
   <section class="screen" id="s1">
@@ -256,16 +297,7 @@ html, body {
   </section>
 
   <section class="screen" id="s4">
-    <h1 class="hl" id="s4-headline" style="position:relative;">
-      <span class="hw">THE</span>
-      <span class="hw">MARKET</span>
-      <span class="hw">NEVER</span>
-      <span class="hw">NEEDED</span>
-      <span class="hw">TO</span>
-      <span class="hw">CHANGE.</span><br>
-      <span class="hw">YOU</span>
-      <span class="hw">DID.</span>
-    </h1>
+    <h1 class="hl">The market never needed to change.<br>You did.</h1>
     <p class="s-label">Where to find TH3FLOW</p>
     <div class="s-links">
       <a class="sl" href="https://discord.gg/UjdzfMgu4r">Discord</a>
@@ -274,37 +306,47 @@ html, body {
 
 </div>
 
+<!-- Hardware detection — runs before Three.js loads -->
+<script>
+(function() {
+  // Quick benchmark: time a tight loop to estimate CPU speed.
+  // Also check logical cores and device memory if available.
+  var score = 0;
+
+  // Core count — low-end phones often have 4 or fewer
+  var cores = navigator.hardwareConcurrency || 2;
+  if (cores <= 2) score += 2;
+  else if (cores <= 4) score += 1;
+
+  // Device memory (Chrome only) — < 2GB is low-end
+  var mem = navigator.deviceMemory || 4;
+  if (mem < 2) score += 2;
+  else if (mem < 4) score += 1;
+
+  // CPU benchmark — time 5M iterations
+  var t0 = performance.now();
+  var x = 0;
+  for (var i = 0; i < 5000000; i++) x += Math.sqrt(i);
+  var ms = performance.now() - t0;
+  if (ms > 80)  score += 3;
+  else if (ms > 40) score += 1;
+
+  // Mobile gets a small nudge — WebGL is heavier on phones
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) score += 1;
+
+  window.LITE = (score >= 3);
+  if (window.LITE) document.body.classList.add('lite');
+})();
+</script>
+
 <!-- Three.js from CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
 // ══════════════════════════════════════════════════════════════
 //  TH3FLOW — WebGL Smoke Engine v3
-//
-//  Art direction: thick backlit studio smoke, dark room,
-//  single hidden light source, no liquid/marble/swirl.
-//
-//  Pipeline:
-//    Pass 1  → Smoke density field          → rtSmoke
-//    Pass 2  → Volumetric light shaft       → rtShaft
-//    Pass 3  → Bright-pass threshold        → rtBrite
-//    Pass 4  → Gaussian blur H              → rtBlurA
-//    Pass 5  → Gaussian blur V (wide)       → rtBlurB
-//    Pass 6  → Composite all to screen
-//
-//  Smoke shader design:
-//    • Three independent noise layers at large/medium/fine scale,
-//      blended so no single pattern dominates
-//    • Drift is almost purely horizontal with very gentle Y turbulence
-//    • NO curl-noise vortices — they cause the marble/liquid look
-//    • Density is hard-thresholded into opaque/void regions
-//      giving the chunky, irregular cloud structure of real smoke
-//    • Light model: analytic extinction along 5 ray-march steps
-//      toward a fixed back-light, giving self-shadowed thickness
-//    • Mouse perturbs the advection velocity field, not position
 // ══════════════════════════════════════════════════════════════
-
-(function () {
+if (!window.LITE) (function () {
 
   // ── Input state ───────────────────────────────────────────
   // mousePos  — cursor in normalised GL coords, used for LOCAL warp only
@@ -421,13 +463,12 @@ html, body {
 
     uniform float uTime;
     uniform vec2  uRes;
-    uniform vec2  uMouse;      // cursor as light source position (GL coords)
-    uniform vec2  uMvel;       // kept for local disturb
-    uniform float uMwake;      // kept for local disturb
-    uniform float uBreath;     // slow 0..1 pulse for background light breathing
+    uniform vec2  uMouse;
+    uniform vec2  uMvel;
+    uniform float uMwake;
     uniform float uTransition; // unused, kept for compat
-    uniform float uT;
-    uniform float uPhase;
+    uniform float uT;          // 0→1 engulf, 1→0 reveal — single continuous value
+    uniform float uPhase;      // 0 = engulf direction, 1 = reveal direction
 
     varying vec2 vUv;
 
@@ -583,46 +624,31 @@ html, body {
 
 
       // ── Lighting ──────────────────────────────────────
-      // Primary light: cursor position (acts as a torch behind the smoke).
-      // When mouse is off-screen (uMouse.x < -0.5) fall back to fixed position.
-      // Mouse light is 40% dimmer than the old fixed light was, so the smoke
-      // still reads as dark and atmospheric — the cursor illuminates locally.
-      vec2 cursorLight = (uMouse.x > -0.5)
-        ? vec2(uMouse.x * aspect, uMouse.y)   // cursor in aspect-corrected space
-        : vec2(0.52 * aspect, 0.76);           // fallback fixed position
-
-      vec2  lpos   = cursorLight;
+      vec2  lpos   = vec2(0.52*aspect, 0.76);
       vec2  ldir   = normalize(lpos - aUv);
       float ldist  = length(lpos - aUv);
 
-      // Falloff — same as before, just driven by cursor position
+      // Tighter falloff — smaller lit zone, light stays concentrated
       float falloff = 1.0 / (1.0 + ldist*ldist*1.8);
-      // 40% dimmer than the original fixed light
-      falloff *= 0.60;
 
       float trans   = transmittance(aUv, t, ldir*0.85);
 
-      // Background breathing light: slow sine pulse that gives the scene
-      // a sense of being alive even when the cursor isn't moving.
-      // Positioned upper-centre so it reads as a hidden source deep in smoke.
-      float breath  = 0.5 + 0.5 * uBreath;  // 0..1 pulsing
-      vec2  bpos    = vec2(0.50 * aspect, 0.80);
-      float bdist   = length(bpos - aUv);
-      float bfall   = 1.0 / (1.0 + bdist*bdist*3.5);
-      float btrans  = transmittance(aUv, t, normalize(bpos-aUv)*0.7);
-      float blit    = btrans * bfall * breath * 0.18;  // subtle, just a pulse
-
-      // Secondary fill — very faint
+      // Secondary fill — kept very faint to preserve shadow depth
       vec2  lpos2    = vec2(0.20*aspect, 0.22);
       float ldist2   = length(lpos2 - aUv);
       float falloff2 = 1.0 / (1.0 + ldist2*ldist2*3.5);
       float trans2   = transmittance(aUv, t, normalize(lpos2-aUv)*0.6);
-      float fill     = trans2 * falloff2 * 0.07;
+      float fill     = trans2 * falloff2 * 0.07;   // dimmer than before
 
+      // pow(3.8): only the very thinnest wisp edges catch light — no broad halos
       float scatter = pow(clamp(1.0-den, 0.0, 1.0), 2.4)
                     * falloff * trans * 0.90;
+
+      // Transmitted: light through genuine voids
       float transm  = trans * falloff * den * 0.28;
-      float lit = scatter*0.70 + transm*0.16 + fill*0.08 + blit;
+
+      // Self-lit: removed — was contributing to the foggy centre feel
+      float lit = scatter*0.70 + transm*0.16 + fill*0.08;
 
       // Contrast boost on lit: sharpen the difference between lit/unlit smoke
       // This is what makes highlights feel small and precious rather than diffuse
@@ -704,10 +730,9 @@ html, body {
     uMouse:      { value: new THREE.Vector2(-2.0, -2.0) },
     uMvel:       { value: new THREE.Vector2(0.0,  0.0)  },
     uMwake:      { value: 0.0 },
-    uBreath:     { value: 0.0 },   // breathing background light pulse
     uTransition: { value: 0.0 },
-    uT:          { value: 0.0 },
-    uPhase:      { value: 0.0 }
+    uT:          { value: 0.0 },  // 0→1 engulf, 1→0 reveal
+    uPhase:      { value: 0.0 }   // 0=engulf, 1=reveal
   };
 
   const smokeMat = new THREE.ShaderMaterial({
@@ -988,13 +1013,9 @@ html, body {
     }
 
     smokeUniforms.uTime.value       = elapsed;
-    // Pass cursor position as light source (GL coords, Y-flipped)
     smokeUniforms.uMouse.value.set(mousePosSmooth.x, mousePosSmooth.y);
     smokeUniforms.uMvel.value.set(mvel.x, mvel.y);
     smokeUniforms.uMwake.value      = mwake;
-    // Breathing: two overlapping slow sines so the rhythm feels organic
-    smokeUniforms.uBreath.value     = Math.sin(elapsed * 0.38) * 0.5
-                                    + Math.sin(elapsed * 0.61) * 0.5;
     smokeUniforms.uTransition.value = 0.0;
     smokeUniforms.uT.value          = uT;
     smokeUniforms.uPhase.value      = uPh;
@@ -1030,11 +1051,20 @@ html, body {
     pass(compMat, null);
   })();
 
-})();
+})(); // end WebGL engine
 
-
-// ══════════════════════════════════════════════════════════════
-//  SCREEN NAVIGATION
+// Lite mode: provide a stub _smokeTransition so the nav IIFE
+// can call it without errors, then immediately fire onPeak.
+if (window.LITE) {
+  window._smokeTransition = {
+    phase: 'idle', startTime: 0,
+    ENGULF_MS: 0, PEAK_MS: 0, REVEAL_MS: 550,
+    onPeak: null
+  };
+  // Show lite hint
+  var lh = document.getElementById('lite-hint');
+  if (lh) lh.style.display = 'block';
+}
 //
 //  Transition sequence (no veil, no fade-to-black):
 //    1. goTo(n) called
@@ -1064,29 +1094,31 @@ html, body {
   screens[cur].style.opacity = '1';
   screens[cur].classList.add('active');
 
-  // ── CSS resistance effect ────────────────────────────────
-  const resistStyle = document.createElement('style');
-  resistStyle.textContent = `
-    .screen.pulling {
-      transform: scale(1.012);
-      filter: blur(0.4px);
-      transition: transform 0.5s cubic-bezier(.2,0,.4,1),
-                  filter    0.5s ease;
-    }
-  `;
-  document.head.appendChild(resistStyle);
 
   // ── Core transition ───────────────────────────────────────
   function goTo(n) {
     if (busy || n === cur || n < 0 || n >= TOTAL) return;
     busy = true;
-    lastTransition = Date.now();
 
-    const ST    = window._smokeTransition;
     const fromN = cur;
     const toN   = n;
 
-    screens[fromN].classList.remove('pulling');
+
+    if (window.LITE) {
+      // Lite: instant swap with CSS opacity crossfade
+      screens[fromN].style.opacity = '0';
+      screens[fromN].classList.remove('active');
+      cur = toN;
+      screens[toN].classList.add('active');
+      screens[toN].style.opacity = '1';
+      dots[fromN].classList.remove('on');
+      dots[toN].classList.add('on');
+      setTimeout(() => { busy = false; }, 650);
+      return;
+    }
+
+    // Full: smoke transition
+    const ST = window._smokeTransition;
     screens[fromN].classList.add('outgoing');
     screens[fromN].classList.remove('active');
 
@@ -1097,11 +1129,9 @@ html, body {
       screens[toN].classList.add('active');
       dots[fromN].classList.remove('on');
       dots[toN].classList.add('on');
-      // Trigger Cheshire smile when landing on s1
       if (toN === 1 && window._triggerCheshire) {
         setTimeout(window._triggerCheshire, ST.REVEAL_MS * 0.85);
       }
-      // Trigger headline scramble when landing on s4
       if (toN === 4 && window._triggerS4Scramble) {
         setTimeout(window._triggerS4Scramble, ST.REVEAL_MS * 0.85);
       }
@@ -1115,52 +1145,9 @@ html, body {
   const next = () => goTo(cur + 1);
   const prev = () => goTo(cur - 1);
 
-  // ── Mouse: deliberate pull system ─────────────────────────
-  let navAcc        = 0;
-  let navLX         = null;
-  let navLY         = null;
-  let pullStartTime = null;
-  let pulling       = false;
-  let pullTimer     = null;
-
-  function cancelPull() {
-    pulling = false;
-    pullStartTime = null;
-    clearTimeout(pullTimer);
-    if (screens[cur]) screens[cur].classList.remove('pulling');
-  }
-
-  function resetNavAcc() { navAcc = 0; cancelPull(); }
-
-  document.addEventListener('mousemove', e => {
-    if (busy) return;
-    if (navLX === null) { navLX = e.clientX; navLY = e.clientY; return; }
-    const dx   = e.clientX - navLX;
-    const dy   = e.clientY - navLY;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    navLX = e.clientX; navLY = e.clientY;
-    if (dist < SPEED_THRESHOLD) return;
-    navAcc += dist;
-    if (!pulling && navAcc > DIST_THRESHOLD) {
-      pulling = true;
-      pullStartTime = Date.now();
-      if (screens[cur]) screens[cur].classList.add('pulling');
-    }
-    if (pulling) {
-      clearTimeout(pullTimer);
-      if (Date.now() - pullStartTime >= BUILD_MS) {
-        if (!busy) { resetNavAcc(); next(); }
-      } else {
-        pullTimer = setTimeout(cancelPull, 300);
-      }
-    }
-  });
-
-  document.addEventListener('mouseleave', resetNavAcc);
+  // Click anywhere advances — no pull required
 
   // ── Click / tap ───────────────────────────────────────────
-  // On mobile, touchend handles taps directly.
-  // This click handler is desktop-only — suppress if a touch just fired.
   let lastTouch = 0;
   document.addEventListener('click', e => {
     if (e.target.closest('a') || e.target.closest('.pd')) return;
@@ -1187,7 +1174,7 @@ html, body {
   }, { passive: false });
 
   // ── Touch — tap and swipe ─────────────────────────────────
-  const TOUCH_COOLDOWN = 2200;
+  const TOUCH_COOLDOWN = window.LITE ? 700 : 2200;
   let tY = 0, tX = 0, tT = 0, lastTouchNav = 0;
 
   document.addEventListener('touchstart', e => {
@@ -1237,251 +1224,6 @@ html, body {
     goTo(+d.dataset.i);
   }));
 
-})();
-
-
-// ══════════════════════════════════════════════════════════════
-//  CHESHIRE — image-based, starts blurred, dissolves to nothing
-// ══════════════════════════════════════════════════════════════
-(function() {
-  // Create an img element, position it top-right, animate it out
-  const img = new Image();
-  img.src = 'cheshire.png';
-  img.id  = 'cheshire-img';
-  img.style.cssText = `
-    position: fixed;
-    top: -4%;
-    right: -6%;
-    width: 38vmin;
-    height: auto;
-    pointer-events: none;
-    z-index: 4;
-    opacity: 0;
-    filter: blur(18px) brightness(0.72);
-    transition: none;
-    mix-blend-mode: screen;
-    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
--webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
-  `;
-  document.body.appendChild(img);
-
-  window._triggerCheshire = function() {
-    const FADE_IN_MS  = 600;
-    const HOLD_MS     = 1200;
-    const FADE_OUT_MS = 3200;
-    const start = performance.now();
-
-    function animate() {
-      const now = performance.now();
-      const elapsed = now - start;
-      const total = FADE_IN_MS + HOLD_MS + FADE_OUT_MS;
-
-      let opacity, blurPx;
-
-      if (elapsed < FADE_IN_MS) {
-        // Fade in — starts at blur:6, eases to blur:4
-        const p  = elapsed / FADE_IN_MS;
-        opacity  = p * p * 0.55;             // ease-in, max opacity ~0.55 (subtle)
-        blurPx   = 6 - p * 2;               // 6px → 4px
-      } else if (elapsed < FADE_IN_MS + HOLD_MS) {
-        // Hold — stays blurry so it never looks like a photo
-        opacity  = 0.55;
-        blurPx   = 25;
-      } else {
-        // Dissolve — opacity drops and blur increases so it smokes away
-        const p  = (elapsed - FADE_IN_MS - HOLD_MS) / FADE_OUT_MS;
-        const ep = 1.0 - (1.0 - p) * (1.0 - p);  // ease-in dissolve
-        opacity  = 0.55 * (1.0 - ep);
-        blurPx   = 4 + ep * 80;             // blur grows as it vanishes
-      }
-
-      img.style.opacity = String(Math.max(0, opacity).toFixed(3));
-      img.style.filter  = `blur(${blurPx.toFixed(1)}px) brightness(0.72)`;
-
-      if (elapsed < total) {
-        requestAnimationFrame(animate);
-      } else {
-        img.style.opacity = '0';
-      }
-    }
-
-    requestAnimationFrame(animate);
-  };
-})();
-
-
-// ══════════════════════════════════════════════════════════════
-//  S4 HEADLINE SCRAMBLE — words physically move to correct places
-//
-//  Technique: FLIP (First, Last, Invert, Play)
-//  1. Render headline in WRONG order (no animation yet)
-//  2. Record each word's bounding rect (First positions)
-//  3. Rearrange DOM to CORRECT order (instantly, off-screen feel)
-//  4. Record each word's new bounding rect (Last positions)
-//  5. Apply inverse transform to each word (so they appear to still
-//     be in wrong positions)
-//  6. Animate transforms to zero — words slide to correct places
-//
-//  Wrong:   "THE MARKET NEVER NEEDED YOU. / YOU NEEDED TO CHANGE."
-//  Correct: "THE MARKET NEVER NEEDED TO CHANGE. / YOU DID."
-//
-//  Words that appear in both sentences physically travel across the
-//  headline. "THE MARKET NEVER NEEDED" barely move. "TO" flies from
-//  line 2 up to line 1. "YOU" slides left. "CHANGE." moves right.
-//  "DID." fades in (new word, no First position).
-// ══════════════════════════════════════════════════════════════
-(function() {
-  const headline = document.getElementById('s4-headline');
-  if (!headline) return;
-
-  // Word definitions — id, display text, which sentence it belongs to
-  // wrongLine/correctLine: 1 or 2
-  const WORDS = [
-    { id:'THE',     text:'THE',     wrong:1, correct:1 },
-    { id:'MARKET',  text:'MARKET',  wrong:1, correct:1 },
-    { id:'NEVER',   text:'NEVER',   wrong:1, correct:1 },
-    { id:'NEEDED',  text:'NEEDED',  wrong:1, correct:1 },
-    // "TO" moves from line 2 wrong → line 1 correct
-    { id:'TO',      text:'TO',      wrong:2, correct:1 },
-    // "CHANGE." stays on same line, moves position
-    { id:'CHANGE',  text:'CHANGE.', wrong:2, correct:1 },
-    // "YOU." wrong line 1 → correct line 2 as "YOU"
-    { id:'YOU',     text:'YOU',     wrong:1, correct:2 },
-    // "NEEDED2" wrong line 2 — disappears (no correct counterpart shown)
-    { id:'NEEDED2', text:'NEEDED',  wrong:2, correct:null },
-    // "DID." is new — only in correct
-    { id:'DID',     text:'DID.',    wrong:null, correct:2 },
-  ];
-
-  function buildWrong() {
-    // Wrong: "THE MARKET NEVER NEEDED YOU." / "YOU NEEDED TO CHANGE."
-    headline.innerHTML = '';
-    headline.style.position = 'relative';
-
-    // Line 1
-    const line1 = document.createElement('div');
-    line1.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;';
-    for (const id of ['THE','MARKET','NEVER','NEEDED','YOU1']) {
-      const w = id === 'YOU1' ? { text: 'YOU.' } : WORDS.find(x => x.id === id);
-      const sp = document.createElement('span');
-      sp.className   = 'hw';
-      sp.dataset.wid = id;
-      sp.textContent = w.text;
-      line1.appendChild(sp);
-    }
-    // Line 2
-    const line2 = document.createElement('div');
-    line2.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;margin-top:0.15em;';
-    for (const id of ['YOU','NEEDED2','TO','CHANGE']) {
-      const w = WORDS.find(x => x.id === id);
-      const sp = document.createElement('span');
-      sp.className   = 'hw';
-      sp.dataset.wid = id;
-      sp.textContent = id === 'YOU' ? 'YOU' : w.text;
-      line2.appendChild(sp);
-    }
-    headline.appendChild(line1);
-    headline.appendChild(line2);
-  }
-
-  function buildCorrect() {
-    // Correct: "THE MARKET NEVER NEEDED TO CHANGE." / "YOU DID."
-    headline.innerHTML = '';
-    headline.style.position = 'relative';
-
-    const line1 = document.createElement('div');
-    line1.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;';
-    for (const id of ['THE','MARKET','NEVER','NEEDED','TO','CHANGE']) {
-      const w = WORDS.find(x => x.id === id);
-      const sp = document.createElement('span');
-      sp.className   = 'hw';
-      sp.dataset.wid = id;
-      sp.textContent = w.text;
-      line1.appendChild(sp);
-    }
-    const line2 = document.createElement('div');
-    line2.style.cssText = 'display:flex;justify-content:center;gap:0.22em;flex-wrap:wrap;margin-top:0.15em;';
-    for (const id of ['YOU','DID']) {
-      const w = WORDS.find(x => x.id === id);
-      const sp = document.createElement('span');
-      sp.className   = 'hw';
-      sp.dataset.wid = id;
-      sp.textContent = w.text;
-      if (id === 'DID') {
-        sp.style.opacity = '0';  // DID is new, will fade in
-      }
-      line2.appendChild(sp);
-    }
-    headline.appendChild(line1);
-    headline.appendChild(line2);
-  }
-
-  window._triggerS4Scramble = function() {
-    // Step 1: render wrong layout
-    buildWrong();
-
-    // Wait for 2.2s, then do the FLIP animation
-    setTimeout(() => {
-      // Fade out words that don't survive into the correct sentence (NEEDED2)
-      // before doing the FLIP so they dissolve slowly rather than snap away
-      const fadingIds = ['NEEDED2', 'YOU1'];
-      headline.querySelectorAll('.hw').forEach(el => {
-        if (fadingIds.includes(el.dataset.wid)) {
-          el.style.transition = 'opacity 1.4s ease';
-          el.style.opacity    = '0';
-        }
-      });
-
-      // Wait for the slow fade, then do the FLIP
-      setTimeout(() => {
-
-      // ── FIRST: record current positions ──────────────
-      const firstPos = {};
-      headline.querySelectorAll('.hw').forEach(el => {
-        if (fadingIds.includes(el.dataset.wid)) return; // already gone
-        const rect = el.getBoundingClientRect();
-        firstPos[el.dataset.wid] = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-      });
-
-      // ── LAST: switch to correct layout ───────────────
-      buildCorrect();
-      headline.getBoundingClientRect(); // force reflow
-
-      // ── INVERT: apply transforms so words appear in old positions ──
-      headline.querySelectorAll('.hw').forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const lastX = rect.left + rect.width/2;
-        const lastY = rect.top  + rect.height/2;
-        const fp = firstPos[el.dataset.wid];
-        if (fp) {
-          const dx = fp.x - lastX;
-          const dy = fp.y - lastY;
-          el.style.transition = 'none';
-          el.style.transform  = `translate(${dx}px, ${dy}px)`;
-        } else {
-          // New word (DID) — fade in from slightly below
-          el.style.transition = 'none';
-          el.style.opacity    = '0';
-          el.style.transform  = 'translateY(14px)';
-        }
-      });
-
-      // ── PLAY: animate to final positions — slow and deliberate ──
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          headline.querySelectorAll('.hw').forEach((el, i) => {
-            const delay = i * 120;  // generous stagger — words arrive one by one
-            el.style.transition = `transform 1.6s ${delay}ms cubic-bezier(.25,0,.2,1),
-                                   opacity   1.0s ${delay + 200}ms ease`;
-            el.style.transform  = 'translate(0, 0)';
-            el.style.opacity    = '1';
-          });
-        });
-      });
-
-      }, 1200); // wait for the fade-out to mostly complete before rearranging
-    }, 2200);
-  };
 })();
 
 
