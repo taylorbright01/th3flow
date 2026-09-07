@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TH3FLOW — FOREX</title>
+<title>TH3FLOW — THE MARKET MOVES</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
@@ -162,6 +162,21 @@ html, body {
 }
 .sl:hover { color:rgba(220,212,200,.78); }
 
+
+/* Final reveal CTAs */
+.final-actions{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:38px;width:min(360px,88vw)}
+.cta{width:100%;padding:17px 22px;border:1px solid rgba(234,228,219,.42);text-decoration:none;text-align:center;font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:300;letter-spacing:.34em;text-transform:uppercase;cursor:none;transition:background .35s,color .35s,border-color .35s,transform .35s;text-shadow:none}
+.cta-primary{background:rgba(234,228,219,.92);color:#070707;border-color:rgba(234,228,219,.92);box-shadow:0 0 45px rgba(234,228,219,.08)}
+.cta-primary:hover{background:#fff;color:#000;transform:translateY(-2px)}
+.cta-secondary{background:rgba(2,2,2,.22);color:rgba(234,228,219,.88)}
+.cta-secondary:hover{border-color:rgba(234,228,219,.78);background:rgba(234,228,219,.07);transform:translateY(-2px)}
+.micro{margin-top:18px;font-family:'Montserrat',sans-serif;font-size:.48rem;font-weight:200;letter-spacing:.25em;text-transform:uppercase;color:rgba(200,192,184,.4);text-align:center;line-height:1.8}
+.mechanic-grid{display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:18px 34px;margin-top:36px;max-width:620px;width:100%}
+.mechanic{border-top:1px solid rgba(234,228,219,.16);padding-top:14px;text-align:left}
+.mechanic b{display:block;font-family:'Montserrat',sans-serif;font-size:.52rem;letter-spacing:.3em;text-transform:uppercase;font-weight:300;color:rgba(234,228,219,.9);margin-bottom:7px}
+.mechanic span{font-family:'Cormorant Garamond',serif;font-size:1rem;font-style:italic;letter-spacing:.03em;color:rgba(234,228,219,.6)}
+@media(max-width:520px){.mechanic-grid{grid-template-columns:1fr;gap:12px}.mechanic{text-align:center}.cta{cursor:auto}}
+
 /* Progress dots */
 #prog {
   position:fixed; right:24px; top:50%;
@@ -267,41 +282,44 @@ body.lite #lite-hint {
 <div id="stage">
 
   <section class="screen active" id="s0">
-    <img id="logo" src="logo.jpeg" alt="TH3FLOW FOREX" onerror="this.style.display='none'">
-    <h1 class="hl">You don't see the market.<br>You see what you understand.</h1>
+    <img id="logo" src="logo.jpeg" alt="TH3FLOW" onerror="this.style.display='none'">
+    <h1 class="hl">The market moves.<br>You choose a side.</h1>
+    <p class="sub">Some moments are watched.<br>Others are entered.</p>
     <span class="hint">Tap to reveal</span>
   </section>
 
   <section class="screen" id="s1">
-    <h1 class="hl">Most see noise.<br>Few see structure.</h1>
+    <h1 class="hl">Two sides.<br>One price.</h1>
     <div class="divider"></div>
-    <p class="sub">The difference isn’t access.<br>It's perception.</p>
+    <p class="sub">Higher. Lower.<br>The clock decides when the talking stops.</p>
   </section>
 
   <section class="screen" id="s2">
     <h1 class="hl">You’ve found TH3FLOW</h1>
     <div class="divider"></div>
-    <p class="sub">Not signals. Not shortcuts.<br>A way of seeing.</p>
-    <p class="para">TH3FLOW is not about more information. It’s about learning how to see. Share forex education, market ideas, and the discipline required to grow over time. Explore trading concepts, market structure, risk management, and the mindset needed to survive, learn, and build consistency.</p>
+    <p class="sub">Not trading. Not signals.<br>A live contest built on real markets.</p>
+    <p class="para">Choose where the price finishes. Stand with the crowd — or against it. When entries close, the pool locks. Then there is nothing left to do but watch the market move.</p>
   </section>
 
   <section class="screen" id="s3">
-    <h1 class="hl">You can watch the market<br>or learn to read it.</h1>
+    <h1 class="hl">Before the line moves,<br>everyone chooses.</h1>
     <div class="divider"></div>
-    <nav class="nav-links">
-      <a class="nl" href="#DISCORD_LINK">Enter the discussion</a>
-      <a class="nl" href="#IDEAS_LINK">Explore market ideas</a>
-      <a class="nl" href="#RISK_LINK">Study risk management</a>
-      <a class="nl" href="#DISCIPLINE_LINK">Build trading discipline</a>
-    </nav>
+    <div class="mechanic-grid">
+      <div class="mechanic"><b>Choose</b><span>Higher or lower.</span></div>
+      <div class="mechanic"><b>Lock</b><span>The crowd sets the pool.</span></div>
+      <div class="mechanic"><b>Watch</b><span>The real market takes over.</span></div>
+      <div class="mechanic"><b>Settle</b><span>One side takes the round.</span></div>
+    </div>
   </section>
 
   <section class="screen" id="s4">
-    <h1 class="hl">The market never needed to change.<br>You did.</h1>
-    <p class="s-label">Where to find TH3FLOW</p>
-    <div class="s-links">
-      <a class="sl" href="https://discord.gg/UjdzfMgu4r">Discord</a>
+    <h1 class="hl">The line will move either way.<br>Will you?</h1>
+    <p class="sub">Higher or Lower. Real market. Real crowd.</p>
+    <div class="final-actions">
+      <a class="cta cta-primary" href="/play/">Play TH3FLOW</a>
+      <a class="cta cta-secondary" href="https://discord.gg/UjdzfMgu4r" target="_blank" rel="noopener">Join the Discord</a>
     </div>
+    <p class="micro">Prototype experience · No real money on the demo</p>
   </section>
 
 </div>
@@ -1232,11 +1250,11 @@ if (window.LITE) {
 // ══════════════════════════════════════════════════════════════
 (function() {
   const msgs = [
-    'Look closer.',
+    'Choose carefully.',
     'Still watching?',
-    'Discipline reveals more.',
-    'The structure is already there.',
-    'Patience is the edge.'
+    'The crowd has already moved.',
+    'One line. Two sides.',
+    'The clock does not wait.'
   ];
   const gEl  = document.getElementById('ghost');
   let gIdx = 0, gTimer, gOut = false;
