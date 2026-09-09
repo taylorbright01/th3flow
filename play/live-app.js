@@ -16,18 +16,18 @@
     upOdds: $('#upOdds'), downOdds: $('#downOdds'), enter: $('#enter'), receipt: $('#receipt'), floaters: $('#floaters'), result: $('#result'),
     resultTitle: $('#resultTitle'), resultText: $('#resultText'), resultSmall: $('#resultSmall'), shareWin: $('#shareWin'), roundNo: $('#roundNo'),
     customStake: $('#customStake'), marketBadge: $('#marketBadge'), pair: $('.pair'), watching: $('#watching'), hours: $('#hours'), toast: $('#toast'),
-    raceTrack: $('#raceTrack')
+    raceTrack: $('#raceTrack'), betLabel: $('#betLabel'), positionBox: $('#positionBox'), positionSide: $('#positionSide'), positionStake: $('#positionStake'), positionNote: $('#positionNote')
   };
   const state = {
     session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 500,
     latestBid: null, chartPoints: [], marketChannel: null, raceChannel: null, lobbyChannel: null, reactionChannel: null,
-    lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: crypto.randomUUID(), nextSession: null
+    lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: crypto.randomUUID(), nextSession: null, pendingEntryRequest: null
   };
   let timerHandle = null, lobbyPoll = null;
   const kobo = n => Math.round(Number(n) * 100);
   const naira = minor => Number(minor || 0) / 100;
-  const moneyMinor = minor => `₦${Math.round(naira(minor)).toLocaleString('en-NG')}`;
-  const signedMinor = minor => `${Number(minor)>=0?'+':'−'}₦${Math.abs(Math.round(naira(minor))).toLocaleString('en-NG')}`;
+  const moneyMinor = minor => { const n=naira(minor); return `₦${n.toLocaleString('en-NG',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})}`; };
+  const signedMinor = minor => { const n=Math.abs(naira(minor)); return `${Number(minor)>=0?'+':'−'}₦${n.toLocaleString('en-NG',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})}`; };
   const poolFmt = minor => { const n=naira(minor); return '₦'+(n>=1e6?(n/1e6).toFixed(2)+'m':n>=1e3?Math.round(n/1e3)+'k':Math.round(n).toLocaleString('en-NG')); };
   const fmt = sec => { sec=Math.max(0,Math.floor(sec)); return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; };
   const toast = m => { E.toast.textContent=m; E.toast.classList.add('show'); setTimeout(()=>E.toast.classList.remove('show'),1600); };
@@ -51,15 +51,44 @@
     E.upOdds.textContent=(grossOdds('higher')||0).toFixed(2)+(localPhase(r)==='entry'?'× est.':'× final');
     E.downOdds.textContent=(grossOdds('lower')||0).toFixed(2)+(localPhase(r)==='entry'?'× est.':'× final');
   }
+  function syncPositionUI() {
+    const has=!!state.entry;
+    if(E.positionBox) E.positionBox.classList.toggle('show',has);
+    if(E.betLabel) E.betLabel.textContent=has?'Add to your position':'Your stake';
+    $$('.choice').forEach(b=>{
+      const side=b.dataset.side==='up'?'higher':'lower';
+      b.disabled=has && side!==state.entry.side;
+      b.classList.toggle('locked',has && side!==state.entry.side);
+      b.classList.toggle('selected',has ? side===state.entry.side : side===state.selectedSide);
+    });
+    if(has){
+      state.selectedSide=state.entry.side;
+      if(E.positionSide) E.positionSide.textContent=state.entry.side==='higher'?'▲ HIGHER':'▼ LOWER';
+      if(E.positionStake) E.positionStake.textContent=moneyMinor(state.entry.stake_minor);
+      if(E.positionNote) E.positionNote.textContent=localPhase(state.race)==='entry'?'Direction locked · scale in until entries close':'Position locked';
+    }
+  }
+
   function syncEntryButton() {
     const r=state.race, p=localPhase(r), bal=state.account?naira(state.account.balance_minor):0;
+    syncPositionUI();
     if(!r){ E.enter.disabled=true; E.enter.textContent='No race selected'; return; }
     if(!state.session){ E.enter.disabled=false; E.enter.textContent='SIGN IN TO ENTER'; return; }
-    if(state.entry){ E.enter.disabled=true; E.enter.textContent='ENTRY CONFIRMED'; return; }
-    if(p!=='entry'){ E.enter.disabled=true; E.enter.textContent='ENTRY CLOSED'; return; }
-    const valid=state.selectedSide && state.stakeNaira>=1 && state.stakeNaira<=bal;
+    if(p!=='entry'){ E.enter.disabled=true; E.enter.textContent=state.entry?'POSITION LOCKED':'ENTRY CLOSED'; return; }
+    const side=state.entry?.side||state.selectedSide;
+    const existing=state.entry?naira(state.entry.stake_minor):0;
+    const raceMax=naira(r.max_stake_minor);
+    const belowMin=state.stakeNaira < naira(r.min_stake_minor);
+    const overBalance=state.stakeNaira>bal;
+    const overPosition=existing+state.stakeNaira>raceMax;
+    const valid=side && state.stakeNaira>0 && !belowMin && !overBalance && !overPosition;
     E.enter.disabled=!valid;
-    E.enter.textContent=!state.selectedSide?'Choose a side':state.stakeNaira>bal?'Stake exceeds balance':`ENTER ${state.selectedSide.toUpperCase()} · ₦${Math.round(state.stakeNaira).toLocaleString('en-NG')}`;
+    if(!side) E.enter.textContent='Choose a side';
+    else if(belowMin) E.enter.textContent=`MINIMUM ${moneyMinor(r.min_stake_minor)}`;
+    else if(overBalance) E.enter.textContent='STAKE EXCEEDS BALANCE';
+    else if(overPosition) E.enter.textContent='POSITION LIMIT REACHED';
+    else if(state.entry) E.enter.textContent=`ADD ${moneyMinor(kobo(state.stakeNaira))} TO ${side.toUpperCase()}`;
+    else E.enter.textContent=`ENTER ${side.toUpperCase()} · ${moneyMinor(kobo(state.stakeNaira))}`;
   }
 
   function renderLobby() {
@@ -73,7 +102,7 @@
       const label=phase==='entry'?'ENTRY OPEN':phase==='closed'?'POOL LOCKED':phase==='live'?'LIVE':phase.toUpperCase();
       return `<button class="racecard ${active?'on':''}" data-race-id="${r.id}">
         <div class="rc-top"><b>${r.symbol.replace(/(.{3})(.{3})/,'$1 / $2')} · ${durationLabel(r.duration_seconds)}</b><span class="rc-state">${label}</span></div>
-        <div class="rc-mid"><span class="rc-lock">${phase==='entry'?'Locks in':phase==='closed'?'Starts in':phase==='live'?'Ends in':'Settled'}</span> <strong class="rc-time">${fmt(secondsTo(target))}</strong></div>
+        <div class="rc-mid"><span class="rc-lock">${phase==='entry'?'Locks in':phase==='closed'?'Starts in':phase==='live'?'Ends in':phase==='void'?'Refunded':'Settled'}</span> <strong class="rc-time">${fmt(secondsTo(target))}</strong></div>
         <div class="rc-bottom"><span class="rc-pool">${poolFmt(Number(r.higher_pool_minor)+Number(r.lower_pool_minor))} pool</span><span class="rc-players">${Number(r.player_count||0).toLocaleString()} players</span></div>
       </button>`;
     }).join('');
@@ -82,10 +111,10 @@
 
   async function loadLobby() {
     const from=new Date(Date.now()-20*60_000).toISOString(), to=new Date(Date.now()+90*60_000).toISOString();
-    const {data,error}=await sb.from('races').select('*').gte('finish_at',from).lte('start_at',to).in('status',['open','closed','live','settling','settled']).order('start_at').limit(30);
+    const {data,error}=await sb.from('races').select('*').gte('finish_at',from).lte('start_at',to).in('status',['open','closed','live','settling','settled','void']).order('start_at').limit(30);
     if(error){ console.error(error); return; }
-    state.races=(data||[]).filter(r=>r.status!=='settled'||Date.parse(r.settled_at||0)>Date.now()-120000);
-    if(!state.race && state.races.length) await selectRace(state.races[0].id);
+    state.races=(data||[]).filter(r=>!['settled','void'].includes(r.status)||Date.parse(r.settled_at||0)>Date.now()-120000);
+    if(!state.race && state.races.length){const preferred=state.races.find(r=>!['settled','void'].includes(r.status))||state.races[0];await selectRace(preferred.id);}
     else if(state.race){ const fresh=state.races.find(r=>r.id===state.race.id); if(fresh) state.race=fresh; }
     renderLobby(); syncPools(); renderState();
     const {data:sessions}=await sb.from('game_sessions').select('*').eq('active',true).gt('closes_at',new Date().toISOString()).order('opens_at').limit(1);
@@ -96,7 +125,7 @@
     const r=state.races.find(x=>x.id===id) || (await sb.from('races').select('*').eq('id',id).single()).data;
     if(!r) return;
     state.race=r; state.entry=null; state.selectedSide=null; state.chartPoints=[]; E.result.classList.remove('show');
-    $$('.choice').forEach(b=>b.classList.remove('selected'));
+    $$('.choice').forEach(b=>{b.classList.remove('selected','locked');b.disabled=false;});
     E.pair.innerHTML=`<b>${r.symbol.replace(/(.{3})(.{3})/,'$1 / $2')}</b> · ${durationLabel(r.duration_seconds)}`;
     E.roundNo.textContent='ROUND #'+r.id.slice(0,8).toUpperCase();
     await subscribeRoom(); await loadMyEntry(); renderLobby(); syncPools(); renderState(); syncEntryButton(); draw();
@@ -136,10 +165,14 @@
     syncBalance(); syncEntryButton(); renderAccount();
   }
   async function loadMyEntry(){
-    if(!state.session||!state.race){state.entry=null;return;}
+    if(!state.session||!state.race){state.entry=null;syncPositionUI();return;}
     const {data}=await sb.from('race_entries').select('*').eq('race_id',state.race.id).eq('user_id',state.session.user.id).maybeSingle(); state.entry=data||null;
-    if(state.entry){ E.receipt.innerHTML=`You entered <strong>${state.entry.side.toUpperCase()}</strong> with ${moneyMinor(state.entry.stake_minor)}.`; }
-    else E.receipt.textContent='You have not entered this race.';
+    if(state.entry){
+      state.selectedSide=state.entry.side;
+      E.receipt.innerHTML=`Your <strong>${state.entry.side.toUpperCase()}</strong> position is <strong>${moneyMinor(state.entry.stake_minor)}</strong>.${localPhase(state.race)==='entry'?'<br>You can add to it until entries close.':''}`;
+    } else {
+      E.receipt.textContent='You have not entered this race.';
+    }
     syncEntryButton();
   }
 
@@ -176,16 +209,45 @@
 
   async function placeEntry(){
     if(!state.session){$('#accountOverlay').classList.add('show');return;}
-    if(!state.race||!state.selectedSide)return;
-    E.enter.disabled=true; E.enter.textContent='ENTERING…';
-    const {data:{session}}=await sb.auth.getSession(); const res=await fetch(`${cfg.supabaseUrl}/functions/v1/enter-race`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':cfg.supabasePublishableKey},body:JSON.stringify({race_id:state.race.id,side:state.selectedSide,stake_minor:kobo(state.stakeNaira),idempotency_key:crypto.randomUUID()})});
-    const body=await res.json(); if(!res.ok){toast(body.message||'Entry rejected');syncEntryButton();return;}
-    state.account={...(state.account||{}),balance_minor:body.balance_minor}; await loadMyEntry(); await loadLobby(); syncBalance(); toast('Entry confirmed');
+    const side=state.entry?.side||state.selectedSide;
+    if(!state.race||!side)return;
+    const stakeMinor=kobo(state.stakeNaira);
+    const fingerprint=`${state.race.id}:${side}:${stakeMinor}`;
+    if(!state.pendingEntryRequest){
+      try{state.pendingEntryRequest=JSON.parse(sessionStorage.getItem('th3flow_pending_position_request')||'null')}catch{}
+    }
+    if(!state.pendingEntryRequest||state.pendingEntryRequest.fingerprint!==fingerprint){
+      state.pendingEntryRequest={fingerprint,key:crypto.randomUUID()};
+      sessionStorage.setItem('th3flow_pending_position_request',JSON.stringify(state.pendingEntryRequest));
+    }
+    const requestKey=state.pendingEntryRequest.key;
+    E.enter.disabled=true; E.enter.textContent=state.entry?'ADDING…':'ENTERING…';
+    const {data:{session}}=await sb.auth.getSession();
+    let res,body;
+    try{
+      res=await fetch(`${cfg.supabaseUrl}/functions/v1/enter-race`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':cfg.supabasePublishableKey},body:JSON.stringify({race_id:state.race.id,side,stake_minor:stakeMinor,idempotency_key:requestKey})});
+      body=await res.json();
+    }catch(e){
+      toast('Network interrupted · press again to retry safely');syncEntryButton();return;
+    }
+    if(!res.ok){
+      if(res.status<500){state.pendingEntryRequest=null;sessionStorage.removeItem('th3flow_pending_position_request')}
+      toast(body.message||'Position rejected');syncEntryButton();return;
+    }
+    state.pendingEntryRequest=null;sessionStorage.removeItem('th3flow_pending_position_request');
+    state.account={...(state.account||{}),balance_minor:body.balance_minor};
+    await loadMyEntry(); await loadLobby(); syncBalance();
+    toast(body.action==='scaled_in'?`Added ${moneyMinor(body.added_stake_minor)}`:body.action==='idempotent_replay'?'Position already confirmed':'Entry confirmed');
   }
 
   async function showSettlement(){
     if(!state.race)return; await loadMyEntry();
-    if(state.race.status==='void'){E.resultSmall.textContent='Round void';E.resultTitle.textContent='ENTRY REFUNDED';E.resultText.textContent='The race could not be settled from the declared feed.';E.shareWin.style.display='none';E.result.classList.add('show');return;}
+    if(state.race.status==='void'){
+      const reason=state.race.void_reason,hadEntry=!!state.entry;
+      E.resultSmall.textContent='Round void';E.resultTitle.textContent=hadEntry?'ENTRY REFUNDED':'RACE VOID';
+      E.resultText.textContent=reason==='one_sided_liquidity'?(hadEntry?'The pool closed without players on both sides. Your full position was refunded before the race began.':'The pool closed without players on both sides, so the race never started.'):reason==='no_entries'?'No players entered this race, so it never started.':reason==='feed_unavailable'?(hadEntry?'The declared price feed was unavailable at a required boundary. Your full position was refunded.':'The declared price feed was unavailable at a required boundary, so the race was voided.'):(hadEntry?'The race was voided and your full position was refunded.':'The race was voided.');
+      E.shareWin.style.display='none';E.result.classList.add('show');await loadSession();return;
+    }
     const winner=state.race.result; E.resultSmall.textContent='Round settled';E.resultTitle.textContent=winner==='higher'?'HIGHER WINS':winner==='lower'?'LOWER WINS':'TIE';
     let msg=`Start ${Number(state.race.start_bid).toFixed(5)} · Finish ${Number(state.race.end_bid).toFixed(5)}`;
     if(state.entry?.settled){msg+=` · ${signedMinor(state.entry.net_pnl_minor)}`; state.lastResult={...state.entry,race:state.race};}
@@ -194,9 +256,9 @@
 
   async function renderStats(){
     const box=$('#history'); if(!state.session){$('#sRounds').textContent='0';$('#sWinRate').textContent='—';$('#sNet').textContent='₦0';$('#sStreak').textContent='0';box.innerHTML='<div class="empty">Sign in to see your Flow.</div>';return;}
-    const [{data:stats},{data:rows}]=await Promise.all([sb.from('player_stats').select('*').eq('user_id',state.session.user.id).maybeSingle(),sb.from('race_entries').select('*,races(symbol,duration_seconds,start_at,result)').eq('user_id',state.session.user.id).order('created_at',{ascending:false}).limit(20)]);
+    const [{data:stats},{data:rows}]=await Promise.all([sb.from('player_stats').select('*').eq('user_id',state.session.user.id).maybeSingle(),sb.from('race_entries').select('*,races(symbol,duration_seconds,start_at,result,void_reason)').eq('user_id',state.session.user.id).order('created_at',{ascending:false}).limit(20)]);
     $('#sRounds').textContent=stats?.rounds||0;$('#sWinRate').textContent=stats?.rounds?Math.round(stats.wins/stats.rounds*100)+'%':'—';$('#sNet').textContent=signedMinor(stats?.net_pnl_minor||0);$('#sStreak').textContent=stats?.best_streak||0;
-    box.innerHTML=!rows?.length?'<div class="empty">Your first race will appear here.</div>':'<div class="hrow head"><span>Race</span><span>Side</span><span>Result</span><span>P/L</span></div>'+rows.map(h=>`<div class="hrow"><span>${h.races?.symbol||'—'} · ${durationLabel(h.races?.duration_seconds||60)}</span><span>${h.side==='higher'?'▲ HIGH':'▼ LOW'}</span><span>${h.settled?(h.net_pnl_minor>0?'WIN':h.net_pnl_minor<0?'LOSS':'TIE'):'OPEN'}</span><span class="${Number(h.net_pnl_minor||0)>=0?'pos':'neg'}">${h.settled?signedMinor(h.net_pnl_minor):'—'}</span></div>`).join('');
+    box.innerHTML=!rows?.length?'<div class="empty">Your first race will appear here.</div>':'<div class="hrow head"><span>Race</span><span>Side</span><span>Result</span><span>P/L</span></div>'+rows.map(h=>`<div class="hrow"><span>${h.races?.symbol||'—'} · ${durationLabel(h.races?.duration_seconds||60)}</span><span>${h.side==='higher'?'▲ HIGH':'▼ LOW'}</span><span>${h.races?.result==='void'?'VOID':h.settled?(h.net_pnl_minor>0?'WIN':h.net_pnl_minor<0?'LOSS':'TIE'):'OPEN'}</span><span class="${Number(h.net_pnl_minor||0)>=0?'pos':'neg'}">${h.settled?signedMinor(h.net_pnl_minor):'—'}</span></div>`).join('');
   }
   async function renderBoard(){
     const cityParam=['Nigeria','Global'].includes(state.leaderboardCity)?null:state.leaderboardCity; const {data,error}=await sb.rpc('get_leaderboard',{p_period:state.leaderboardPeriod,p_city:cityParam,p_limit:20}); if(error){console.error(error);return;}
@@ -217,7 +279,7 @@
   // Main controls.
   $$('.stake').forEach(b=>b.onclick=()=>{state.stakeNaira=Number(b.dataset.v);$$('.stake').forEach(x=>x.classList.toggle('on',x===b));E.customStake.value='';syncEntryButton();});
   E.customStake.oninput=()=>{state.stakeNaira=Math.max(0,Number(E.customStake.value||0));$$('.stake').forEach(x=>x.classList.remove('on'));syncEntryButton();};
-  $$('.choice').forEach(b=>b.onclick=()=>{state.selectedSide=b.dataset.side==='up'?'higher':'lower';$$('.choice').forEach(x=>x.classList.toggle('selected',x===b));syncEntryButton();});
+  $$('.choice').forEach(b=>b.onclick=()=>{if(state.entry)return;state.selectedSide=b.dataset.side==='up'?'higher':'lower';$$('.choice').forEach(x=>x.classList.toggle('selected',x===b));syncEntryButton();});
   E.enter.onclick=placeEntry;
   E.again.onclick=async()=>{ const next=state.races.find(r=>r.id!==state.race?.id && ['open','closed'].includes(r.status) && Date.parse(r.start_at)>=Date.now()); if(next) await selectRace(next.id); else await loadLobby(); };
   $$('.react').forEach(b=>b.onclick=()=>sendReaction(b.textContent));
@@ -255,7 +317,7 @@
   state.lobbyChannel=sb.channel('lobby').on('broadcast',{event:'lobby_update'},({payload})=>{const i=state.races.findIndex(r=>r.id===payload.id);if(i>=0)state.races[i]={...state.races[i],...payload};else state.races.push(payload);if(state.race?.id===payload.id)state.race={...state.race,...payload};renderLobby();syncPools();renderState();}).subscribe();
   sb.auth.onAuthStateChange(async()=>{await loadSession();await loadMyEntry();});
   $('.demo').textContent='LIVE ENGINE · PAYMENT RAILS PENDING';
-  $('.legal').innerHTML='<strong style="color:rgba(238,232,223,.42);font-weight:400">Player vs player · winners share the losing pool · 2% fee on profit only</strong><br>Reference price: declared MT5 broker Bid feed · start/end observations are server-authoritative · races void/refund if a valid boundary price is unavailable.';
+  $('.legal').innerHTML='<strong style="color:rgba(238,232,223,.42);font-weight:400">Player vs player · add to your position until entry close · 2% fee on profit only</strong><br>Direction locks on first entry · a race only starts with liquidity on both HIGHER and LOWER · one-sided pools refund before the start · reference price uses the declared MT5 broker Bid feed.';
   window.addEventListener('resize',draw);
   Promise.all([loadSession(),loadLobby()]).then(()=>{syncBalance();renderState();draw();});
 })();

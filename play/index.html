@@ -69,8 +69,8 @@ canvas{display:block;width:100%;height:100%}
 .pools{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pool{padding:14px 10px;border:1px solid var(--line);text-align:center}.pool b{display:block;font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400}.pool strong{display:block;font-family:'Cormorant Garamond',serif;font-size:1.48rem;font-weight:300;margin:5px 0 2px}.pool span{font-size:.45rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(238,232,223,.42)}
 .betlabel{font-size:.47rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(238,232,223,.43);margin-top:1px}.stakes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.stake{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ivory);padding:11px 5px;font:300 .61rem Montserrat;cursor:pointer}.stake.on{background:rgba(238,232,223,.92);color:#090909;border-color:rgba(238,232,223,.92)}
 .stakewrap{display:grid;grid-template-columns:1fr;gap:7px}.customstake{display:flex;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.018);height:42px}.customstake span{padding-left:12px;color:rgba(238,232,223,.45);font-size:.76rem}.customstake input{width:100%;height:100%;border:0;outline:0;background:transparent;color:var(--ivory);font:300 .69rem Montserrat;padding:0 11px}.customstake input::placeholder{color:rgba(238,232,223,.23)}
-.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{min-height:82px;border:1px solid var(--line);background:transparent;color:var(--ivory);cursor:pointer;transition:.25s}.choice b{display:block;font-size:.63rem;letter-spacing:.25em;font-weight:400}.choice span{display:block;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.87rem;color:rgba(238,232,223,.45);margin-top:6px}.choice.up:hover,.choice.up.selected{background:rgba(183,218,177,.09);border-color:rgba(200,230,194,.38)}.choice.down:hover,.choice.down.selected{background:rgba(220,160,155,.08);border-color:rgba(239,192,188,.35)}
-.enter{width:100%;padding:15px;border:1px solid rgba(238,232,223,.42);background:rgba(238,232,223,.92);color:#070707;font:400 .59rem Montserrat;letter-spacing:.29em;text-transform:uppercase;cursor:pointer}.enter:disabled{opacity:.22;cursor:not-allowed}.receipt{min-height:52px;text-align:center;font-family:'Cormorant Garamond',serif;color:rgba(238,232,223,.62);line-height:1.48;font-size:.9rem}.legal{text-align:center;font-size:.42rem;line-height:1.75;letter-spacing:.11em;text-transform:uppercase;color:rgba(238,232,223,.22);padding-top:3px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{min-height:82px;border:1px solid var(--line);background:transparent;color:var(--ivory);cursor:pointer;transition:.25s}.choice b{display:block;font-size:.63rem;letter-spacing:.25em;font-weight:400}.choice span{display:block;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.87rem;color:rgba(238,232,223,.45);margin-top:6px}.choice.up:hover,.choice.up.selected{background:rgba(183,218,177,.09);border-color:rgba(200,230,194,.38)}.choice.down:hover,.choice.down.selected{background:rgba(220,160,155,.08);border-color:rgba(239,192,188,.35)}.choice:disabled{cursor:not-allowed;opacity:.25}.choice.locked{filter:saturate(.35)}
+.positionbox{display:none;border:1px solid rgba(216,194,158,.24);background:rgba(216,194,158,.045);padding:12px 13px;align-items:center;justify-content:space-between;gap:14px}.positionbox.show{display:flex}.positioncopy span{display:block;font-size:.42rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(238,232,223,.34)}.positioncopy b{display:block;font-size:.57rem;letter-spacing:.16em;font-weight:400;margin-top:4px}.positionamount{text-align:right}.positionamount strong{display:block;font-family:'Cormorant Garamond',serif;font-size:1.38rem;font-weight:300}.positionamount span{display:block;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.76rem;color:rgba(238,232,223,.38);margin-top:2px}.enter{width:100%;padding:15px;border:1px solid rgba(238,232,223,.42);background:rgba(238,232,223,.92);color:#070707;font:400 .59rem Montserrat;letter-spacing:.29em;text-transform:uppercase;cursor:pointer}.enter:disabled{opacity:.22;cursor:not-allowed}.receipt{min-height:52px;text-align:center;font-family:'Cormorant Garamond',serif;color:rgba(238,232,223,.62);line-height:1.48;font-size:.9rem}.legal{text-align:center;font-size:.42rem;line-height:1.75;letter-spacing:.11em;text-transform:uppercase;color:rgba(238,232,223,.22);padding-top:3px}
 
 .result{position:absolute;inset:0;background:rgba(3,3,3,.91);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;z-index:8;opacity:0;pointer-events:none;transition:.42s;padding:24px}.result.show{opacity:1;pointer-events:auto}.result .rsmall{font-size:.5rem;letter-spacing:.37em;text-transform:uppercase;color:rgba(238,232,223,.43)}.result h2{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,7vw,6rem);font-weight:300;letter-spacing:.08em;margin:9px 0}.result p{font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(238,232,223,.63);font-size:1rem;max-width:630px}.result-actions{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap;justify-content:center}.again,.sharewin{border:1px solid rgba(238,232,223,.35);background:transparent;color:var(--ivory);padding:12px 20px;font-size:.5rem;letter-spacing:.25em;text-transform:uppercase;cursor:pointer}.sharewin{background:rgba(238,232,223,.92);color:#080808}
 .back{display:inline-block;margin-top:20px;color:rgba(238,232,223,.32);text-decoration:none;font-size:.46rem;letter-spacing:.29em;text-transform:uppercase}
@@ -177,7 +177,12 @@ canvas{display:block;width:100%;height:100%}
         <div class="pool"><b>▼ Lower</b><strong id="downPool">₦142k</strong><span id="downOdds">2.27× est.</span></div>
       </div>
 
-      <div class="betlabel">Your stake</div>
+      <div class="positionbox" id="positionBox">
+        <div class="positioncopy"><span>Your position</span><b id="positionSide">▲ HIGHER</b></div>
+        <div class="positionamount"><strong id="positionStake">₦0</strong><span id="positionNote">Direction locked · scale in until entries close</span></div>
+      </div>
+
+      <div class="betlabel" id="betLabel">Your stake</div>
       <div class="stakewrap">
         <div class="stakes">
           <button class="stake on" data-v="500">₦500</button><button class="stake" data-v="1000">₦1,000</button><button class="stake" data-v="2500">₦2,500</button>
@@ -192,7 +197,7 @@ canvas{display:block;width:100%;height:100%}
       </div>
       <button class="enter" id="enter" disabled>Choose a side</button>
       <div class="receipt" id="receipt">You have not entered this race.</div>
-      <div class="legal"><strong style="color:rgba(238,232,223,.42);font-weight:400">Player vs player · winners share the losing pool · demo applies a 2% fee to profit only</strong><br>Demo only · no money accepted or paid out · simulated crowd and market path · production settlement would use the declared MT5 bid-price feed</div>
+      <div class="legal"><strong style="color:rgba(238,232,223,.42);font-weight:400">Player vs player · add to your position until entry close · 2% fee on profit only</strong><br>Direction locks on your first entry · a race only starts when both Higher and Lower have liquidity · one-sided pools refund before the start</div>
     </aside>
   </main>
   <a class="back" href="/">← Return to TH3FLOW</a>
@@ -277,7 +282,7 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const els={
     balance:$('#balance'),price:$('#price'),delta:$('#delta'),chart:$('#chart'),phase:$('#phase'),timer:$('#timer'),statusSmall:$('#statusSmall'),statusBig:$('#statusBig'),statusNote:$('#statusNote'),
-    upPool:$('#upPool'),downPool:$('#downPool'),upOdds:$('#upOdds'),downOdds:$('#downOdds'),enter:$('#enter'),receipt:$('#receipt'),floaters:$('#floaters'),result:$('#result'),resultTitle:$('#resultTitle'),resultText:$('#resultText'),resultSmall:$('#resultSmall'),again:$('#again'),shareWin:$('#shareWin'),roundNo:$('#roundNo'),customStake:$('#customStake'),marketBadge:$('#marketBadge'),pair:$('.pair'),watching:$('#watching'),hours:$('#hours'),toast:$('#toast')
+    upPool:$('#upPool'),downPool:$('#downPool'),upOdds:$('#upOdds'),downOdds:$('#downOdds'),enter:$('#enter'),receipt:$('#receipt'),floaters:$('#floaters'),result:$('#result'),resultTitle:$('#resultTitle'),resultText:$('#resultText'),resultSmall:$('#resultSmall'),again:$('#again'),shareWin:$('#shareWin'),roundNo:$('#roundNo'),customStake:$('#customStake'),marketBadge:$('#marketBadge'),pair:$('.pair'),watching:$('#watching'),hours:$('#hours'),toast:$('#toast'),betLabel:$('#betLabel'),positionBox:$('#positionBox'),positionSide:$('#positionSide'),positionStake:$('#positionStake'),positionNote:$('#positionNote')
   };
 
   const raceCfg={
@@ -291,7 +296,7 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   let history=Array.isArray(saved.history)?saved.history:[];
   let publicBoard=!!saved.publicBoard;
   let bestStreak=saved.bestStreak||0,currentStreak=saved.currentStreak||0;
-  let selectedRace=1,stake=500,side=null,entered=false,phase='entry',phaseLeft=raceCfg[1].entry,round=(saved.round||0)+1;
+  let selectedRace=1,stake=500,side=null,entered=false,positionStake=0,phase='entry',phaseLeft=raceCfg[1].entry,round=(saved.round||0)+1;
   let upPool=raceCfg[1].baseUp,downPool=raceCfg[1].baseDown,startPrice=null,current=1.17452,points=[],prePoints=[],raceElapsed=0,preElapsed=0,raceDuration=raceCfg[1].race;
   let tickTimer=null,anim=null,marketAnim=null,lastResult=null,lobbyPulse=0;
 
@@ -307,8 +312,13 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   function syncBalance(){els.balance.textContent=money(balance)}
   function syncPools(){els.upPool.textContent=poolFmt(upPool);els.downPool.textContent=poolFmt(downPool);els.upOdds.textContent=grossOdds('up').toFixed(2)+(phase==='entry'?'× est.':'× final');els.downOdds.textContent=grossOdds('down').toFixed(2)+(phase==='entry'?'× est.':'× final');updateRaceCards()}
   function chooseStake(v,custom=false){stake=Math.max(0,Math.floor(v||0));$$('.stake').forEach(b=>b.classList.toggle('on',!custom&&+b.dataset.v===stake));if(!custom)els.customStake.value='';updateEnter()}
-  function chooseSide(s){side=s;$$('.choice').forEach(b=>b.classList.toggle('selected',b.dataset.side===s));updateEnter()}
-  function updateEnter(){if(phase!=='entry'||entered){els.enter.disabled=true;return}const valid=side&&stake>=100&&stake<=balance;els.enter.disabled=!valid;if(!side)els.enter.textContent='Choose a side';else if(stake<100)els.enter.textContent='Minimum ₦100';else if(stake>balance)els.enter.textContent='Stake exceeds balance';else els.enter.textContent=`ENTER ${side.toUpperCase()} · ${money(stake)}`}
+  function syncDemoPosition(){
+    els.positionBox.classList.toggle('show',entered);els.betLabel.textContent=entered?'Add to your position':'Your stake';
+    $$('.choice').forEach(b=>{const mine=b.dataset.side===side;b.disabled=entered&&!mine;b.classList.toggle('locked',entered&&!mine);b.classList.toggle('selected',mine)});
+    if(entered){els.positionSide.textContent=side==='up'?'▲ HIGHER':'▼ LOWER';els.positionStake.textContent=money(positionStake);els.positionNote.textContent=phase==='entry'?'Direction locked · scale in until entries close':'Position locked'}
+  }
+  function chooseSide(s){if(entered)return;side=s;$$('.choice').forEach(b=>b.classList.toggle('selected',b.dataset.side===s));updateEnter()}
+  function updateEnter(){syncDemoPosition();if(phase!=='entry'){els.enter.disabled=true;els.enter.textContent=entered?'POSITION LOCKED':'ENTRY CLOSED';return}const valid=side&&stake>=100&&stake<=balance;els.enter.disabled=!valid;if(!side)els.enter.textContent='Choose a side';else if(stake<100)els.enter.textContent='Minimum ₦100';else if(stake>balance)els.enter.textContent='Stake exceeds balance';else els.enter.textContent=entered?`ADD ${money(stake)} TO ${side==='up'?'HIGHER':'LOWER'}`:`ENTER ${side==='up'?'HIGHER':'LOWER'} · ${money(stake)}`}
 
   $$('.stake').forEach(b=>b.onclick=()=>chooseStake(+b.dataset.v));
   els.customStake.addEventListener('input',()=>chooseStake(+els.customStake.value,true));
@@ -317,18 +327,18 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   $$('.react').forEach(b=>b.onclick=()=>spawn(b.textContent,true));
 
   function switchRace(r){
-    if(entered){els.receipt.innerHTML='Your entry is already committed to this race.<br>Wait for settlement before moving rooms.';return}
+    if(entered){els.receipt.innerHTML='Your position is already committed to this race.<br>You can add to it here until entries close.';return}
     selectedRace=r;const c=raceCfg[r];raceDuration=c.race;phase='entry';phaseLeft=c.entry;
     upPool=c.baseUp+Math.random()*50000;downPool=c.baseDown+Math.random()*50000;side=null;
-    $$('.choice').forEach(b=>b.classList.remove('selected'));$$('.racecard').forEach(b=>b.classList.toggle('on',+b.dataset.race===r));
+    $$('.choice').forEach(b=>{b.classList.remove('selected','locked');b.disabled=false});$$('.racecard').forEach(b=>b.classList.toggle('on',+b.dataset.race===r));
     els.pair.innerHTML=`<b>EUR / USD</b> · ${c.label}`;els.receipt.textContent=`You stepped into the next ${c.label.toLowerCase()} race.`;
     syncPools();renderState();updateEnter();
   }
 
   els.enter.onclick=()=>{
-    if(!side||entered||phase!=='entry'||stake<100||stake>balance)return;
-    entered=true;balance-=stake;if(side==='up')upPool+=stake;else downPool+=stake;syncBalance();syncPools();updateEnter();save();
-    els.receipt.innerHTML=`You entered <strong>${side==='up'?'HIGHER':'LOWER'}</strong> with ${money(stake)}.<br>Final return locks when entries close.`;
+    if(!side||phase!=='entry'||stake<100||stake>balance)return;
+    const wasEntered=entered;entered=true;positionStake+=stake;balance-=stake;if(side==='up')upPool+=stake;else downPool+=stake;syncBalance();syncPools();updateEnter();save();
+    els.receipt.innerHTML=`Your <strong>${side==='up'?'HIGHER':'LOWER'}</strong> position is now <strong>${money(positionStake)}</strong>.<br>${wasEntered?'Added to your position.':'Direction locked.'} You can scale in until entries close.`;
   };
 
   function spawn(emoji,own=false){const d=document.createElement('div');d.className='floater';d.textContent=(own?(side==='up'?'▲':'▼'):'')+emoji;d.style.left=(8+Math.random()*84)+'%';d.style.animationDuration=(1.2+Math.random()*.8)+'s';els.floaters.appendChild(d);setTimeout(()=>d.remove(),2200)}
@@ -337,13 +347,13 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   function marketStep(dt){const noise=(Math.random()-.495)*0.000055*Math.sqrt(Math.max(dt,.016)*18);current+=noise;els.price.textContent=current.toFixed(5)}
   function startPreMarket(){cancelAnimationFrame(marketAnim);let last=performance.now();preElapsed=0;prePoints=[{x:0,y:current}];function frame(now){if(phase==='race'||phase==='settled')return;const dt=(now-last)/1000;last=now;preElapsed+=dt;marketStep(dt);if(!prePoints.length||preElapsed-prePoints[prePoints.length-1].x>.11)prePoints.push({x:preElapsed,y:current});if(prePoints.length>220)prePoints.shift();els.delta.textContent=phase==='entry'?'LIVE PRICE · START NOT YET KNOWN':'POOL CLOSED · PRICE STILL MOVING';els.delta.className='delta';draw();marketAnim=requestAnimationFrame(frame)}marketAnim=requestAnimationFrame(frame)}
 
-  function resetRound(){clearInterval(tickTimer);cancelAnimationFrame(anim);cancelAnimationFrame(marketAnim);round++;entered=false;side=null;stake=500;const c=raceCfg[selectedRace];phase='entry';phaseLeft=c.entry;raceElapsed=0;raceDuration=c.race;upPool=c.baseUp+Math.random()*70000;downPool=c.baseDown+Math.random()*70000;startPrice=null;current=1.1735+Math.random()*.003;points=[];prePoints=[];els.result.classList.remove('show');els.receipt.textContent='You have not entered this race.';els.roundNo.textContent='ROUND #'+String(round).padStart(3,'0');$$('.choice').forEach(b=>b.classList.remove('selected'));chooseStake(500);syncPools();draw();startPreMarket();runClock();save()}
+  function resetRound(){clearInterval(tickTimer);cancelAnimationFrame(anim);cancelAnimationFrame(marketAnim);round++;entered=false;positionStake=0;side=null;stake=500;const c=raceCfg[selectedRace];phase='entry';phaseLeft=c.entry;raceElapsed=0;raceDuration=c.race;upPool=c.baseUp+Math.random()*70000;downPool=c.baseDown+Math.random()*70000;startPrice=null;current=1.1735+Math.random()*.003;points=[];prePoints=[];els.result.classList.remove('show');els.receipt.textContent='You have not entered this race.';els.roundNo.textContent='ROUND #'+String(round).padStart(3,'0');$$('.choice').forEach(b=>{b.classList.remove('selected','locked');b.disabled=false});chooseStake(500);syncPools();draw();startPreMarket();runClock();save()}
   els.again.onclick=resetRound;
 
   function runClock(){clearInterval(tickTimer);renderState();tickTimer=setInterval(()=>{phaseLeft--;lobbyPulse++;
     if(phase==='entry'&&Math.random()<.75){const add=500+Math.random()*7000;Math.random()<.54?upPool+=add:downPool+=add;syncPools()}
     if(Math.random()<.45)crowdReact();
-    if(phaseLeft<=0){if(phase==='entry'){phase='closed';phaseLeft=raceCfg[selectedRace].closed;syncPools();updateEnter()}else if(phase==='closed'){phase='race';phaseLeft=raceDuration;lockAndRace()}else if(phase==='race'){settle();return}}
+    if(phaseLeft<=0){if(phase==='entry'){if(upPool<=0||downPool<=0){if(entered){balance+=positionStake;syncBalance()}phase='settled';els.resultSmall.textContent='Round void';els.resultTitle.textContent='ENTRY REFUNDED';els.resultText.textContent='The pool closed without liquidity on both sides, so the race did not start.';els.shareWin.style.display='none';els.result.classList.add('show');updateEnter();save();return}phase='closed';phaseLeft=raceCfg[selectedRace].closed;syncPools();updateEnter()}else if(phase==='closed'){phase='race';phaseLeft=raceDuration;lockAndRace()}else if(phase==='race'){settle();return}}
     renderState();updateRaceCards();
   },1000)}
 
@@ -357,8 +367,8 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   function animateRace(){let last=performance.now();function frame(now){if(phase!=='race')return;const dt=(now-last)/1000;last=now;raceElapsed+=dt;const noise=(Math.random()-.495)*0.000075*Math.sqrt(Math.max(dt,.016)*18);const meanPull=(startPrice-current)*.018*dt;current+=noise+meanPull;if(!points.length||raceElapsed-points[points.length-1].x>.10)points.push({x:raceElapsed,y:current});els.price.textContent=current.toFixed(5);const pip=(current-startPrice)*10000;els.delta.textContent=(pip>=0?'▲ +':'▼ ')+Math.abs(pip).toFixed(2)+' PIPS FROM START';els.delta.className='delta '+(pip>=0?'up':'down');draw();if(Math.random()<.025)crowdReact();anim=requestAnimationFrame(frame)}anim=requestAnimationFrame(frame)}
 
   function settle(){clearInterval(tickTimer);phase='settled';cancelAnimationFrame(anim);if(Math.abs(current-startPrice)<.000005)current+=.00002;const winner=current>startPrice?'up':'down',mult=grossOdds(winner);let msg='You watched this one from the crowd.',profit=0,ret=0,won=false;
-    if(entered){if(side===winner){ret=netReturn(mult,stake);profit=ret-stake;balance+=ret;won=true;currentStreak++;bestStreak=Math.max(bestStreak,currentStreak);msg=`You won ${money(profit)} profit · ${money(ret)} returned.`;els.resultSmall.textContent='Your side took the round'}else{profit=-stake;currentStreak=0;msg=`Your ${money(stake)} entry was on the other side.`;els.resultSmall.textContent='The market went the other way'}
-      history.unshift({round,ts:Date.now(),race:raceCfg[selectedRace].label,side,winner,stake,profit,start:startPrice,end:current});history=history.slice(0,50);save();syncBalance();renderStats();
+    if(entered){if(side===winner){ret=netReturn(mult,positionStake);profit=ret-positionStake;balance+=ret;won=true;currentStreak++;bestStreak=Math.max(bestStreak,currentStreak);msg=`You won ${money(profit)} profit · ${money(ret)} returned.`;els.resultSmall.textContent='Your side took the round'}else{profit=-positionStake;currentStreak=0;msg=`Your ${money(positionStake)} position was on the other side.`;els.resultSmall.textContent='The market went the other way'}
+      history.unshift({round,ts:Date.now(),race:raceCfg[selectedRace].label,side,winner,stake:positionStake,profit,start:startPrice,end:current});history=history.slice(0,50);save();syncBalance();renderStats();
     }else els.resultSmall.textContent='Round settled';
     lastResult={winner,won,profit,ret,race:raceCfg[selectedRace].label,round,start:startPrice,end:current,streak:currentStreak};
     els.resultTitle.textContent=winner==='up'?'HIGHER WINS':'LOWER WINS';els.resultText.textContent=`Start ${startPrice.toFixed(5)} · Finish ${current.toFixed(5)} · ${msg}`;els.shareWin.style.display=entered?'inline-block':'none';els.result.classList.add('show');els.phase.textContent='SETTLED';els.timer.textContent='00:00';els.statusSmall.textContent='Round complete';els.statusBig.textContent=winner==='up'?'▲ HIGHER':'▼ LOWER';els.statusNote.textContent='The next pool is already forming.';els.marketBadge.textContent='ROUND SETTLED';for(let i=0;i<10;i++)setTimeout(()=>spawn(winner==='up'?'🔥':'💀'),i*80)
