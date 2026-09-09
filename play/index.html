@@ -80,6 +80,8 @@ canvas{display:block;width:100%;height:100%}
 .sharecard{border:1px solid rgba(238,232,223,.2);padding:34px 22px;text-align:center;background:radial-gradient(circle at 50% 15%,#24201b 0,#090807 50%,#030303 100%);position:relative;overflow:hidden}.sharecard:before{content:"";position:absolute;inset:0;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}.sharebrand{font-size:.54rem;letter-spacing:.45em;text-transform:uppercase;color:rgba(238,232,223,.55);position:relative}.sharearrow{font-family:'Cormorant Garamond',serif;font-size:3.6rem;margin:20px 0 3px;position:relative}.shareprofit{font-family:'Cormorant Garamond',serif;font-size:3rem;font-weight:300;position:relative}.sharesub{font-size:.48rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,232,223,.4);margin-top:8px;position:relative}.sharestreak{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;color:rgba(238,232,223,.55);margin-top:20px;position:relative}.shareurl{font-size:.46rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,232,223,.28);margin-top:25px;position:relative}.shareactions{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}.shareaction{border:1px solid var(--line);background:transparent;color:var(--ivory);padding:10px 4px;font-size:.44rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#eee8df;color:#080808;padding:11px 16px;z-index:80;font-size:.47rem;letter-spacing:.15em;text-transform:uppercase;opacity:0;pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
 
+
+.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.authfield{display:grid;gap:6px}.authfield.full{grid-column:1/-1}.authfield label{font-size:.44rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,232,223,.42)}.authfield input{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ivory);padding:12px;outline:none}.account-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.account-note{margin-top:14px;border:1px solid var(--line);padding:12px;font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(238,232,223,.48);line-height:1.6}.quiet-lobby{grid-column:1/-1;border:1px solid var(--line);padding:22px;text-align:center;background:rgba(255,255,255,.015)}.quiet-lobby b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:300;letter-spacing:.13em}.quiet-lobby span{display:block;margin-top:7px;color:rgba(238,232,223,.42);font-size:.52rem;letter-spacing:.12em;text-transform:uppercase}.danger-soft{border-color:rgba(239,192,188,.25)!important;color:rgba(239,192,188,.8)!important}
 @media(max-width:920px){.shell{grid-template-columns:1fr}.race{min-height:520px}.stage{height:340px}.phasebar{align-items:flex-end}.reacts{max-width:190px}.hero{margin-top:2vh}.top{grid-template-columns:1fr auto}.demo{display:none}.topright{grid-column:2;grid-row:1}.balance{display:none}}
 @media(max-width:650px){.racetrack{grid-template-columns:1fr}.racecard{display:grid;grid-template-columns:1fr auto;gap:4px 16px}.rc-top,.rc-mid,.rc-bottom{grid-column:1/-1}.lobbyhint{display:none}.statsgrid{grid-template-columns:repeat(2,1fr)}.shareactions{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.wrap{padding:16px 11px 30px}.top{gap:8px}.navbtn{padding:8px 7px;font-size:.4rem}.hero h1{font-size:2.55rem}.racehead{padding:15px}.stage{height:300px;padding:10px}.phasebar{padding:13px 15px}.reacts{gap:4px;max-width:150px}.react{padding:6px 8px}.side{padding:13px}.price{font-size:3.2rem}.timer{font-size:1.85rem}.hours{font-size:.38rem;letter-spacing:.12em}.leaderrow{grid-template-columns:28px 1fr auto}.lstreak{display:none}.hrow{grid-template-columns:1.2fr .75fr .75fr .9fr}.modal{padding:17px}.topright .navbtn:nth-child(1){display:none}}
@@ -93,6 +95,7 @@ canvas{display:block;width:100%;height:100%}
     <div class="topright">
       <button class="navbtn" id="leaderBtn">Leaderboard</button>
       <button class="navbtn" id="flowBtn">My Flow</button>
+      <button class="navbtn" id="accountBtn">Account</button>
       <div class="balance">Demo balance<strong id="balance">₦25,000</strong></div>
     </div>
   </header>
@@ -219,6 +222,32 @@ canvas{display:block;width:100%;height:100%}
   </div>
 </div>
 
+
+<div class="overlay" id="accountOverlay">
+  <div class="modal" style="width:min(620px,100%)">
+    <div class="modalhead"><div><h2>Enter the Flow.</h2><p id="accountIdentity">Not signed in</p></div><button class="close" data-close="accountOverlay">×</button></div>
+    <div id="authLoggedOut">
+      <div class="authgrid"><div class="authfield full"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com"></div></div>
+      <div class="account-actions"><button class="shareaction" id="sendLogin">Send sign-in link</button><button class="shareaction" disabled>Phone OTP later</button></div>
+      <div class="account-note">Accounts are wired for Supabase Auth. Payment/KYC providers remain separate adapters so the game can be completed before a Nigerian banking or crypto rail is chosen.</div>
+    </div>
+    <div id="authLoggedIn" style="display:none">
+      <div class="statsgrid" style="margin-top:16px"><div class="statbox"><b id="accountBalance">₦—</b><span>Available</span></div><div class="statbox"><b id="accountKyc">not started</b><span>KYC status</span></div></div>
+      <div class="authgrid">
+        <div class="authfield"><label>Display name</label><input id="profileName" maxlength="40" placeholder="Your public name"></div>
+        <div class="authfield"><label>Public city</label><input id="profileCity" maxlength="60" placeholder="Lagos, Abuja…"></div>
+      </div>
+      <div class="privacy"><div><b>Public leaderboards</b><span>Opt in only. Public city is profile data, never pulled from KYC.</span></div><button class="toggle" id="profileLeader"></button></div>
+      <div class="account-actions"><button class="shareaction" id="saveProfile">Save profile</button><button class="shareaction" id="signOut">Sign out</button></div>
+      <div class="sectionlabel" style="margin:20px 0 8px">Funds</div>
+      <div class="account-actions"><button class="shareaction" id="depositStub">Deposit</button><button class="shareaction" id="withdrawStub">Withdraw</button></div>
+      <div class="account-note">Player funds live in the TH3FLOW ledger; the real bank/crypto custody adapter is intentionally not enabled until the provider is selected.</div>
+      <div class="sectionlabel" style="margin:20px 0 8px">Responsible play</div>
+      <div class="account-actions"><button class="shareaction danger-soft" id="coolOff24">24 hour cool-off</button><button class="shareaction" disabled>Self-exclusion via support/admin until final policy</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="shareOverlay">
   <div class="modal" style="width:min(560px,100%)">
     <div class="modalhead"><div><h2>Leave a mark.</h2><p>Your result, ready for the outside world.</p></div><button class="close" data-close="shareOverlay">×</button></div>
@@ -241,8 +270,10 @@ canvas{display:block;width:100%;height:100%}
 </div>
 <div class="toast" id="toast">Copied</div>
 
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-(() => {
+if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const els={
     balance:$('#balance'),price:$('#price'),delta:$('#delta'),chart:$('#chart'),phase:$('#phase'),timer:$('#timer'),statusSmall:$('#statusSmall'),statusBig:$('#statusBig'),statusNote:$('#statusNote'),
@@ -385,5 +416,6 @@ canvas{display:block;width:100%;height:100%}
   syncBalance();renderStats();renderBoard();syncPools();draw();updateHours();startPreMarket();runClock();setInterval(updateHours,30000);
 })();
 </script>
+<script src="./live-app.js"></script>
 </body>
 </html>
