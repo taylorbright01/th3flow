@@ -1,6 +1,6 @@
 // Safe browser configuration. Never put Supabase secret keys or payment/feed tokens here.
 window.TH3FLOW_CONFIG = {
-  mode: 'demo', // change to 'live' after Supabase is deployed
+  mode: 'live', // change to 'live' after Supabase is deployed
   supabaseUrl: 'https://zbkphislqllyunsdkiag.supabase.co',
   supabasePublishableKey: 'sb_publishable_cZ0JB4YTeqgLpEQg6Gayuw_plk4Z9Gj',
   paymentsEnabled: false,
