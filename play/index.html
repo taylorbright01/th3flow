@@ -20,7 +20,7 @@ button{touch-action:manipulation}
 .brand{font-family:'Cormorant Garamond',serif;font-weight:300;letter-spacing:.28em;font-size:1.08rem;text-decoration:none;color:var(--ivory)}
 .demo{font-size:.48rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(238,232,223,.38);text-align:center}
 .topright{display:flex;justify-content:flex-end;align-items:center;gap:8px}
-.navbtn{border:1px solid var(--line);background:rgba(255,255,255,.018);color:rgba(238,232,223,.72);padding:9px 11px;font-size:.48rem;letter-spacing:.19em;text-transform:uppercase;cursor:pointer;transition:.2s}
+.navbtn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:rgba(255,255,255,.018);color:rgba(238,232,223,.72);padding:9px 11px;font-size:.48rem;letter-spacing:.19em;text-transform:uppercase;cursor:pointer;transition:.2s}
 .navbtn:hover{border-color:rgba(238,232,223,.34);color:var(--ivory)}
 .balance{font-size:.48rem;letter-spacing:.17em;text-transform:uppercase;color:rgba(238,232,223,.46);text-align:right;min-width:108px}
 .balance strong{display:block;font-family:'Cormorant Garamond',serif;font-size:1.35rem;letter-spacing:.04em;font-weight:400;color:var(--ivory);margin-top:1px}
@@ -94,6 +94,7 @@ canvas{display:block;width:100%;height:100%}
     <div class="demo">Interactive prototype · accelerated timing</div>
     <div class="topright">
       <button class="navbtn" id="leaderBtn">Leaderboard</button>
+      <a class="navbtn" href="../cabinet/">Cabinet</a>
       <button class="navbtn" id="flowBtn">My Flow</button>
       <button class="navbtn" id="accountBtn">Account</button>
       <div class="balance">Demo balance<strong id="balance">₦25,000</strong></div>
