@@ -46,6 +46,7 @@
     referralCode: null
   };
   let timerHandle = null, lobbyPoll = null;
+  let authMode = 'signin', passwordRecovery = false;
   const kobo = n => Math.round(Number(n) * 100);
   const naira = minor => Number(minor || 0) / 100;
   const moneyMinor = minor => { const n=naira(minor); return `₦${n.toLocaleString('en-NG',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})}`; };
@@ -317,9 +318,105 @@
     $('#leaderToggle').classList.toggle('on',!!state.profile?.leaderboard_opt_in);
   }
 
+  function setAuthStatus(message, isError=false){
+    const el=$('#authStatus');
+    if(!el)return;
+    el.textContent=message;
+    el.style.color=isError?'rgba(239,192,188,.92)':'rgba(238,232,223,.48)';
+  }
+
+  function setAuthMode(mode){
+    authMode=mode==='signup'?'signup':'signin';
+    $$('#authModeTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.authMode===authMode));
+    const confirm=$('#confirmPasswordField');
+    const forgot=$('#forgotPassword');
+    const submit=$('#passwordAuthSubmit');
+    const password=$('#loginPassword');
+    if(confirm)confirm.style.display=authMode==='signup'?'grid':'none';
+    if(forgot)forgot.style.visibility=authMode==='signin'?'visible':'hidden';
+    if(submit)submit.textContent=authMode==='signup'?'Create account':'Sign in';
+    if(password)password.autocomplete=authMode==='signup'?'new-password':'current-password';
+    setAuthStatus(authMode==='signup'
+      ? 'Create your TH3FLOW account with an email and password.'
+      : 'Use your email and password to sign in.');
+  }
+
+  async function submitPasswordAuth(){
+    const email=$('#loginEmail')?.value.trim()||'';
+    const password=$('#loginPassword')?.value||'';
+    const confirm=$('#confirmPassword')?.value||'';
+    const submit=$('#passwordAuthSubmit');
+    if(!email){setAuthStatus('Enter your email address.',true);return;}
+    if(password.length<8){setAuthStatus('Password must be at least 8 characters.',true);return;}
+    if(authMode==='signup' && password!==confirm){setAuthStatus('Passwords do not match.',true);return;}
+    if(submit){submit.disabled=true;submit.textContent=authMode==='signup'?'Creating…':'Signing in…';}
+    try{
+      if(authMode==='signup'){
+        const {data,error}=await sb.auth.signUp({
+          email,password,
+          options:{emailRedirectTo:location.origin+'/play/'}
+        });
+        if(error){setAuthStatus(error.message,true);return;}
+        if(data?.session){
+          setAuthStatus('Account created. You are signed in.');
+          await loadSession();
+          $('#accountOverlay').classList.remove('show');
+          toast('Account created');
+        }else{
+          setAuthStatus('Account created. Check your email to confirm it, then sign in.');
+        }
+      }else{
+        const {error}=await sb.auth.signInWithPassword({email,password});
+        if(error){setAuthStatus(error.message,true);return;}
+        await loadSession();
+        $('#accountOverlay').classList.remove('show');
+        toast('Signed in');
+      }
+    }catch(err){
+      console.error('TH3FLOW auth error',err);
+      setAuthStatus('Could not complete authentication. Please try again.',true);
+    }finally{
+      if(submit){submit.disabled=false;submit.textContent=authMode==='signup'?'Create account':'Sign in';}
+    }
+  }
+
+  async function sendPasswordReset(){
+    const email=$('#loginEmail')?.value.trim()||'';
+    if(!email){setAuthStatus('Enter your email first, then choose Forgot password.',true);return;}
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/play/'});
+    setAuthStatus(error?error.message:'Password reset email sent. Open the link in that email.',!!error);
+  }
+
+  async function saveRecoveredPassword(){
+    const p1=$('#recoveryPassword')?.value||'';
+    const p2=$('#recoveryPasswordConfirm')?.value||'';
+    if(p1.length<8){toast('Password must be at least 8 characters');return;}
+    if(p1!==p2){toast('Passwords do not match');return;}
+    const {error}=await sb.auth.updateUser({password:p1});
+    if(error){toast(error.message);return;}
+    passwordRecovery=false;
+    $('#recoveryPassword').value='';
+    $('#recoveryPasswordConfirm').value='';
+    await loadSession();
+    renderAccount();
+    toast('Password updated');
+  }
+
   async function renderAccount(){
-    const logged=!!state.session; $('#authLoggedOut').style.display=logged?'none':'block';$('#authLoggedIn').style.display=logged?'block':'none';
-    if(!logged){$('#accountIdentity').textContent='Not signed in';return;}
+    const logged=!!state.session;
+    const loggedOut=$('#authLoggedOut'), recovery=$('#authRecovery'), loggedIn=$('#authLoggedIn');
+    if(loggedOut)loggedOut.style.display=!logged && !passwordRecovery?'block':'none';
+    if(recovery)recovery.style.display=passwordRecovery?'block':'none';
+    if(loggedIn)loggedIn.style.display=logged && !passwordRecovery?'block':'none';
+    if(passwordRecovery){
+      $('#accountIdentity').textContent='Password recovery';
+      return;
+    }
+    if(!logged){
+      $('#accountIdentity').textContent='Not signed in';
+      setAuthMode(authMode);
+      return;
+    }
     $('#accountIdentity').textContent=state.session.user.email||state.session.user.phone||'Signed in'; $('#profileName').value=state.profile?.display_name||'';$('#profileCity').value=state.profile?.public_city||'';$('#accountKyc').textContent=(state.profile?.kyc_status||'not_started').replaceAll('_',' ');$('#accountBalance').textContent=state.account?moneyMinor(state.account.balance_minor):'₦—'; $('#profileLeader').classList.toggle('on',!!state.profile?.leaderboard_opt_in);
   }
   async function saveProfile(){const updates={display_name:$('#profileName').value.trim()||null,public_city:$('#profileCity').value.trim()||null,leaderboard_opt_in:$('#profileLeader').classList.contains('on')};const {data,error}=await sb.from('profiles').update(updates).eq('user_id',state.session.user.id).select().single();if(error)return toast(error.message);state.profile=data;toast('Profile saved');}
@@ -340,7 +437,13 @@
   $$('#periodTabs .tab').forEach(b=>b.onclick=()=>{state.leaderboardPeriod=b.dataset.period;$$('#periodTabs .tab').forEach(x=>x.classList.toggle('on',x===b));renderBoard();});
   $$('#cityTabs .tab').forEach(b=>b.onclick=()=>{state.leaderboardCity=b.dataset.city;$$('#cityTabs .tab').forEach(x=>x.classList.toggle('on',x===b));renderBoard();});
   $('#leaderToggle').onclick=async()=>{if(!state.session)return $('#accountOverlay').classList.add('show');const next=!state.profile?.leaderboard_opt_in;const {data,error}=await sb.from('profiles').update({leaderboard_opt_in:next}).eq('user_id',state.session.user.id).select().single();if(error)return toast(error.message);state.profile=data;renderBoard();};
-  $('#sendLogin').onclick=async()=>{const email=$('#loginEmail').value.trim();if(!email)return;const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+'/play/'}});toast(error?error.message:'Sign-in link sent');};
+  $$('#authModeTabs .tab').forEach(b=>b.onclick=()=>setAuthMode(b.dataset.authMode));
+  $('#passwordAuthSubmit').onclick=submitPasswordAuth;
+  $('#passwordAuthForm').addEventListener('submit',e=>{e.preventDefault();submitPasswordAuth();});
+  $('#forgotPassword').onclick=sendPasswordReset;
+  $('#saveNewPassword').onclick=saveRecoveredPassword;
+  $('#cancelRecovery').onclick=()=>{passwordRecovery=false;renderAccount();};
+
   $('#signOut').onclick=async()=>{await sb.auth.signOut();await loadSession();toast('Signed out');}; $('#saveProfile').onclick=saveProfile; $('#profileLeader').onclick=()=>$('#profileLeader').classList.toggle('on'); $('#coolOff24').onclick=()=>coolOff(24);
   $('#depositStub').onclick=()=>toast(cfg.paymentsEnabled?'Open configured deposit provider':'Payment rail not connected yet'); $('#withdrawStub').onclick=()=>toast(cfg.paymentsEnabled?'Open configured withdrawal provider':'Payment rail not connected yet');
 
@@ -381,7 +484,20 @@
   // Keep lobby/race countdowns alive even without database writes.
   timerHandle=setInterval(()=>{renderState();renderLobby();draw();},250); lobbyPoll=setInterval(loadLobby,15000);
   state.lobbyChannel=sb.channel('lobby').on('broadcast',{event:'lobby_update'},({payload})=>{const i=state.races.findIndex(r=>r.id===payload.id);if(i>=0)state.races[i]={...state.races[i],...payload};else state.races.push(payload);if(state.race?.id===payload.id)state.race={...state.race,...payload};renderLobby();syncPools();renderState();}).subscribe();
-  sb.auth.onAuthStateChange(async()=>{await loadSession();await loadMyEntry();});
+  sb.auth.onAuthStateChange((event,session)=>{
+    state.session=session;
+    if(event==='PASSWORD_RECOVERY'){
+      passwordRecovery=true;
+      $('#accountOverlay').classList.add('show');
+      renderAccount();
+    }
+    // Supabase recommends avoiding additional client calls directly inside
+    // onAuthStateChange. Defer profile/referral/race reads until the callback returns.
+    setTimeout(async()=>{
+      await loadSession();
+      await loadMyEntry();
+    },0);
+  });
   $('.demo').textContent='LIVE ENGINE · PAYMENT RAILS PENDING';
   $('.legal').innerHTML='<strong style="color:rgba(238,232,223,.42);font-weight:400">Player vs player · add to your position until entry close · 2% fee on profit only</strong><br>Direction locks on first entry · a race only starts with liquidity on both HIGHER and LOWER · one-sided pools refund before the start · reference price uses the declared MT5 broker Bid feed.';
   window.addEventListener('resize',draw);

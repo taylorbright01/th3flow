@@ -233,9 +233,25 @@ canvas{display:block;width:100%;height:100%}
   <div class="modal" style="width:min(620px,100%)">
     <div class="modalhead"><div><h2>Enter the Flow.</h2><p id="accountIdentity">Not signed in</p></div><button class="close" data-close="accountOverlay">×</button></div>
     <div id="authLoggedOut">
-      <div class="authgrid"><div class="authfield full"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com"></div></div>
-      <div class="account-actions"><button class="shareaction" id="sendLogin">Send sign-in link</button><button class="shareaction" disabled>Phone OTP later</button></div>
-      <div class="account-note">Accounts are wired for Supabase Auth. Payment/KYC providers remain separate adapters so the game can be completed before a Nigerian banking or crypto rail is chosen.</div>
+      <div class="tabs" id="authModeTabs">
+        <button class="tab on" type="button" data-auth-mode="signin">Sign in</button>
+        <button class="tab" type="button" data-auth-mode="signup">Create account</button>
+      </div>
+      <form id="passwordAuthForm" class="authgrid">
+        <div class="authfield full"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com" required></div>
+        <div class="authfield full"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password" minlength="8" required></div>
+        <div class="authfield full" id="confirmPasswordField" style="display:none"><label>Confirm password</label><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Repeat your password" minlength="8"></div>
+      </form>
+      <div class="account-actions"><button class="shareaction" id="passwordAuthSubmit" type="button">Sign in</button><button class="shareaction" id="forgotPassword" type="button">Forgot password?</button></div>
+      <div class="account-note" id="authStatus">Use your email and password. New here? Choose Create account.</div>
+    </div>
+    <div id="authRecovery" style="display:none">
+      <div class="authgrid">
+        <div class="authfield full"><label>New password</label><input id="recoveryPassword" type="password" autocomplete="new-password" placeholder="New password" minlength="8"></div>
+        <div class="authfield full"><label>Confirm new password</label><input id="recoveryPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repeat new password" minlength="8"></div>
+      </div>
+      <div class="account-actions"><button class="shareaction" id="saveNewPassword" type="button">Set new password</button><button class="shareaction" id="cancelRecovery" type="button">Cancel</button></div>
+      <div class="account-note">Choose a new password for your TH3FLOW account.</div>
     </div>
     <div id="authLoggedIn" style="display:none">
       <div class="statsgrid" style="margin-top:16px"><div class="statbox"><b id="accountBalance">₦—</b><span>Available</span></div><div class="statbox"><b id="accountKyc">not started</b><span>KYC status</span></div></div>
@@ -276,7 +292,7 @@ canvas{display:block;width:100%;height:100%}
 </div>
 <div class="toast" id="toast">Copied</div>
 
-<script src="./config.js?v=133"></script>
+<script src="./config.js?v=134"></script>
 <script>
 // Deterministic first-load bootstrap. The Play page must not depend on another
 // TH3FLOW page having loaded Supabase first.
@@ -479,7 +495,7 @@ if (window.TH3FLOW_CONFIG?.mode === 'live') {
   Promise.resolve(window.__TH3FLOW_SDK_READY).then(ok => {
     if (!ok) return;
     const el = document.createElement('script');
-    el.src = './live-app.js?v=133';
+    el.src = './live-app.js?v=134';
     el.async = false;
     el.onerror = () => {
       console.error('TH3FLOW: live-app.js failed to load');
