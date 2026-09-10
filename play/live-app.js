@@ -1,15 +1,36 @@
 (() => {
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  // Bind the navigation shell before any Supabase work. If live initialisation fails,
+  // Account / My Flow / Leaderboard still open instead of appearing dead.
+  const show = id => document.getElementById(id)?.classList.add('show');
+  document.getElementById('accountBtn')?.addEventListener('click', () => show('accountOverlay'));
+  document.getElementById('leaderBtn')?.addEventListener('click', () => show('leaderOverlay'));
+  document.getElementById('flowBtn')?.addEventListener('click', () => show('flowOverlay'));
+  $$('.close').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.close)?.classList.remove('show')));
+  $$('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); }));
+
   const cfg = window.TH3FLOW_CONFIG || {};
   if (cfg.mode !== 'live') return;
   if (!window.supabase || !cfg.supabaseUrl || !cfg.supabasePublishableKey || cfg.supabaseUrl.includes('YOUR_PROJECT')) {
-    console.error('TH3FLOW live mode needs Supabase URL + publishable key in /play/config.js');
+    const problem = !window.supabase
+      ? 'Supabase library did not load. Refresh the page or check the CDN connection.'
+      : 'Live configuration is missing from /play/config.js.';
+    console.error('TH3FLOW live startup failed:', problem);
+    const note = document.getElementById('accountIdentity');
+    if (note) note.textContent = problem;
+    const toast = document.getElementById('toast');
+    if (toast) { toast.textContent = 'TH3FLOW connection unavailable'; toast.classList.add('show'); }
     return;
   }
 
   const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
-  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const REF_STORE = 'th3flow_pending_referral';
+  const refParam = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+  if (refParam) {
+    try { localStorage.setItem(REF_STORE, JSON.stringify({ code: refParam, captured_at: Date.now() })); } catch {}
+  }
   const E = {
     balance: $('#balance'), price: $('#price'), delta: $('#delta'), chart: $('#chart'), phase: $('#phase'), timer: $('#timer'),
     statusSmall: $('#statusSmall'), statusBig: $('#statusBig'), statusNote: $('#statusNote'), upPool: $('#upPool'), downPool: $('#downPool'),
@@ -21,7 +42,8 @@
   const state = {
     session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 500,
     latestBid: null, chartPoints: [], marketChannel: null, raceChannel: null, lobbyChannel: null, reactionChannel: null,
-    lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: crypto.randomUUID(), nextSession: null, pendingEntryRequest: null
+    lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: (globalThis.crypto?.randomUUID?.() || ('room-'+Date.now()+'-'+Math.random().toString(36).slice(2))), nextSession: null, pendingEntryRequest: null,
+    referralCode: null
   };
   let timerHandle = null, lobbyPoll = null;
   const kobo = n => Math.round(Number(n) * 100);
@@ -153,15 +175,44 @@
   }
   function pushPoint(bid,time){ state.chartPoints.push({bid,time}); if(state.chartPoints.length>500) state.chartPoints.shift(); }
 
+  async function claimPendingReferral(){
+    if(!state.session)return;
+    let pending=null;
+    try{pending=JSON.parse(localStorage.getItem(REF_STORE)||'null')}catch{}
+    if(!pending?.code)return;
+    if(!pending.captured_at || Date.now()-Number(pending.captured_at)>8*24*60*60*1000){
+      try{localStorage.removeItem(REF_STORE)}catch{}
+      return;
+    }
+    const {data,error}=await sb.rpc('claim_referral',{p_code:String(pending.code).toUpperCase()});
+    if(!error){
+      try{localStorage.removeItem(REF_STORE)}catch{}
+      if(data?.status==='attributed')toast('Referral connected');
+      return;
+    }
+    const msg=String(error.message||'');
+    if(/already|yourself|first race|expired|not found/i.test(msg)){
+      try{localStorage.removeItem(REF_STORE)}catch{}
+    }
+  }
+
+  async function loadReferralIdentity(){
+    if(!state.session){state.referralCode=null;return;}
+    const {data,error}=await sb.rpc('get_my_referral_dashboard');
+    if(!error)state.referralCode=data?.code||null;
+  }
+
   async function loadSession() {
     const {data:{session}}=await sb.auth.getSession(); state.session=session;
     if(session){
+      await claimPendingReferral();
       const [p,a]=await Promise.all([
         sb.from('profiles').select('*').eq('user_id',session.user.id).maybeSingle(),
         sb.from('ledger_accounts').select('id,balance_minor,currency').eq('kind','player').eq('currency','NGN').maybeSingle()
       ]);
       state.profile=p.data||null; state.account=a.data||null;
-    } else { state.profile=null; state.account=null; state.entry=null; }
+      await loadReferralIdentity();
+    } else { state.profile=null; state.account=null; state.entry=null; state.referralCode=null; }
     syncBalance(); syncEntryButton(); renderAccount();
   }
   async function loadMyEntry(){
@@ -296,8 +347,23 @@
   // Share result using the existing social modal.
   E.shareWin.onclick=()=>{if(!state.lastResult)return;const r=state.lastResult.race,profit=state.lastResult.net_pnl_minor;$('#shareArrow').textContent=r.result==='higher'?'▲':'▼';$('#shareProfit').textContent=signedMinor(profit);$('#shareSub').textContent=`${r.symbol} · ${durationLabel(r.duration_seconds)} · ${r.id.slice(0,8).toUpperCase()}`;$('#shareStreak').textContent=profit>0?'Called it.':'The market went the other way.';$('#shareOverlay').classList.add('show');};
   function shareText(){if(!state.lastResult)return 'TH3FLOW';const r=state.lastResult.race;return `I called ${state.lastResult.side.toUpperCase()} on TH3FLOW · ${r.symbol} ${durationLabel(r.duration_seconds)} · ${signedMinor(state.lastResult.net_pnl_minor)}.`;}
-  $('#nativeShare').onclick=async()=>{const data={title:'TH3FLOW',text:shareText(),url:location.origin+'/play/'};if(navigator.share)try{await navigator.share(data)}catch{}else{await navigator.clipboard?.writeText(data.text+' '+data.url);toast('Copied')}};
-  $('#waShare').onclick=()=>window.open('https://wa.me/?text='+encodeURIComponent(shareText()+' '+location.origin+'/play/'),'_blank','noopener');$('#xShare').onclick=()=>window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText())+'&url='+encodeURIComponent(location.origin+'/play/'),'_blank','noopener');$('#copyShare').onclick=async()=>{await navigator.clipboard?.writeText(shareText()+' '+location.origin+'/play/');toast('Copied')};
+  function shareUrl(){return state.referralCode?`${location.origin}/play/?ref=${encodeURIComponent(state.referralCode)}`:`${location.origin}/play/`;}
+  async function recordResultShare(channel){
+    if(!state.session||!state.lastResult?.race?.id)return;
+    const {error}=await sb.rpc('record_social_event',{p_event_type:'result_share',p_reference_id:state.lastResult.race.id,p_metadata:{channel}});
+    if(error)console.warn('share event not recorded',error.message);
+  }
+  $('#nativeShare').onclick=async()=>{
+    const payload={title:'TH3FLOW',text:shareText(),url:shareUrl()};
+    if(navigator.share){
+      try{await navigator.share(payload);await recordResultShare('native')}catch{}
+    }else{
+      await navigator.clipboard?.writeText(payload.text+' '+payload.url);await recordResultShare('copy');toast('Copied');
+    }
+  };
+  $('#waShare').onclick=()=>{recordResultShare('whatsapp');window.open('https://wa.me/?text='+encodeURIComponent(shareText()+' '+shareUrl()),'_blank','noopener')};
+  $('#xShare').onclick=()=>{recordResultShare('x');window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText())+'&url='+encodeURIComponent(shareUrl()),'_blank','noopener')};
+  $('#copyShare').onclick=async()=>{await navigator.clipboard?.writeText(shareText()+' '+shareUrl());await recordResultShare('copy');toast('Copied')};
 
 
   $('#saveShare').onclick=()=>{
@@ -308,7 +374,7 @@
     x.fillStyle='#eee8df';x.font='300 180px serif';x.fillText(r.result==='higher'?'▲':'▼',540,410);x.font='300 122px serif';x.fillText(signedMinor(state.lastResult.net_pnl_minor),540,600);
     x.fillStyle='rgba(238,232,223,.55)';x.font='300 27px sans-serif';x.fillText(`${r.symbol} · ${durationLabel(r.duration_seconds)} · ${r.id.slice(0,8).toUpperCase()}`,540,680);
     x.fillStyle='rgba(238,232,223,.7)';x.font='italic 42px serif';x.fillText(state.lastResult.net_pnl_minor>0?'Called it.':'The market went the other way.',540,795);
-    x.strokeStyle='rgba(238,232,223,.13)';x.beginPath();x.moveTo(260,870);x.lineTo(820,870);x.stroke();x.fillStyle='rgba(238,232,223,.36)';x.font='300 25px sans-serif';x.fillText('HIGHER OR LOWER. REAL MARKET. REAL CROWD.',540,960);x.fillStyle='rgba(238,232,223,.25)';x.font='300 24px sans-serif';x.fillText('th3flow.world/play',540,1190);
+    x.strokeStyle='rgba(238,232,223,.13)';x.beginPath();x.moveTo(260,870);x.lineTo(820,870);x.stroke();x.fillStyle='rgba(238,232,223,.36)';x.font='300 25px sans-serif';x.fillText('HIGHER OR LOWER. REAL MARKET. REAL CROWD.',540,960);x.fillStyle='rgba(238,232,223,.25)';x.font='300 24px sans-serif';x.fillText(state.referralCode?`th3flow.world/play · ${state.referralCode}`:'th3flow.world/play',540,1190);
     const a=document.createElement('a');a.download=`th3flow-${r.id.slice(0,8)}.png`;a.href=c.toDataURL('image/png');a.click();toast('Share card saved');
   };
 
