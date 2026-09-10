@@ -276,8 +276,54 @@ canvas{display:block;width:100%;height:100%}
 </div>
 <div class="toast" id="toast">Copied</div>
 
-<script src="./config.js?v=132"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js?v=133"></script>
+<script>
+// Deterministic first-load bootstrap. The Play page must not depend on another
+// TH3FLOW page having loaded Supabase first.
+(() => {
+  const show = id => document.getElementById(id)?.classList.add('show');
+  const hide = id => document.getElementById(id)?.classList.remove('show');
+
+  // Make the shell useful immediately, even while the SDK is loading.
+  document.getElementById('accountBtn')?.addEventListener('click', () => show('accountOverlay'));
+  document.getElementById('leaderBtn')?.addEventListener('click', () => show('leaderOverlay'));
+  document.getElementById('flowBtn')?.addEventListener('click', () => show('flowOverlay'));
+  document.querySelectorAll('.close').forEach(b => b.addEventListener('click', () => hide(b.dataset.close)));
+
+  const cfg = window.TH3FLOW_CONFIG || {};
+  if (cfg.mode !== 'live') {
+    window.__TH3FLOW_SDK_READY = Promise.resolve(false);
+    return;
+  }
+
+  const loadScript = src => new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.async = true;
+    el.onload = () => resolve(true);
+    el.onerror = () => reject(new Error('Failed to load '+src));
+    document.head.appendChild(el);
+  });
+
+  window.__TH3FLOW_SDK_READY = (async () => {
+    if (window.supabase?.createClient) return true;
+    try {
+      await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    } catch (firstError) {
+      console.warn('TH3FLOW: primary Supabase CDN failed; trying fallback.', firstError);
+      try {
+        await loadScript('https://unpkg.com/@supabase/supabase-js@2');
+      } catch (secondError) {
+        console.error('TH3FLOW: both Supabase CDN loads failed.', secondError);
+        const note = document.getElementById('accountIdentity');
+        if (note) note.textContent = 'Connection library could not load. Refresh or check your connection.';
+        return false;
+      }
+    }
+    return !!window.supabase?.createClient;
+  })();
+})();
+</script>
 <script>
 if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -427,6 +473,22 @@ if ((window.TH3FLOW_CONFIG?.mode || 'demo') !== 'live') (() => {
   syncBalance();renderStats();renderBoard();syncPools();draw();updateHours();startPreMarket();runClock();setInterval(updateHours,30000);
 })();
 </script>
-<script src="./live-app.js?v=132"></script>
+<script>
+// Start the live application only after its SDK is definitely available.
+if (window.TH3FLOW_CONFIG?.mode === 'live') {
+  Promise.resolve(window.__TH3FLOW_SDK_READY).then(ok => {
+    if (!ok) return;
+    const el = document.createElement('script');
+    el.src = './live-app.js?v=133';
+    el.async = false;
+    el.onerror = () => {
+      console.error('TH3FLOW: live-app.js failed to load');
+      const note = document.getElementById('accountIdentity');
+      if (note) note.textContent = 'TH3FLOW application failed to load. Refresh the page.';
+    };
+    document.body.appendChild(el);
+  });
+}
+</script>
 </body>
 </html>
