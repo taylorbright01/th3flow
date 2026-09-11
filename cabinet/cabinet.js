@@ -153,7 +153,7 @@ function renderRefs(){
     : 'Referral visits and attribution can be tracked before launch. Cash commission accrual remains off until TH3FLOW deliberately activates the programme.';
 
   const payout=$('#requestPayout');
-  if(payout){const enough=Number(r.payable_balance_minor||0)>=Number(r.min_payout_minor||0)&&Number(r.min_payout_minor||0)>0;payout.disabled=!data.session||!enough;payout.textContent=enough?'Request payout':'Balance below payout minimum';}
+  if(payout){const enough=Number(r.payable_balance_minor||0)>=Number(r.min_payout_minor||0)&&Number(r.min_payout_minor||0)>0;payout.disabled=!data.session;payout.textContent=enough?'Request payout':'Balance below payout minimum';payout.title=enough?'Request affiliate payout':`Minimum payout is ${money(r.min_payout_minor||0)} · available ${money(r.payable_balance_minor||0)}`;}
 }
 function render(){
   const s=data.stats||{}, m=data.metrics||{};
