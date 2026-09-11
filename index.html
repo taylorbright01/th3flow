@@ -1315,5 +1315,9 @@ if (window.LITE) {
   }
 })();
 </script>
+
+<script>
+(()=>{const q=new URLSearchParams(location.search),code=(q.get('ref')||'').trim().toUpperCase();if(!code)return;try{let token=localStorage.getItem('th3flow_ref_visit_'+code);if(!token){token=globalThis.crypto?.randomUUID?.()||('v-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem('th3flow_ref_visit_'+code,token)}localStorage.setItem('th3flow_pending_referral',JSON.stringify({code,captured_at:Date.now(),visit_token:token}))}catch{}})();
+</script>
 </body>
 </html>
