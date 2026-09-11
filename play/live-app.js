@@ -57,7 +57,7 @@
     upOdds: $('#upOdds'), downOdds: $('#downOdds'), enter: $('#enter'), receipt: $('#receipt'), floaters: $('#floaters'), result: $('#result'),
     resultTitle: $('#resultTitle'), resultText: $('#resultText'), resultSmall: $('#resultSmall'), shareWin: $('#shareWin'), roundNo: $('#roundNo'),
     customStake: $('#customStake'), marketBadge: $('#marketBadge'), pair: $('.pair'), watching: $('#watching'), hours: $('#hours'), toast: $('#toast'),
-    raceTrack: $('#raceTrack'), betLabel: $('#betLabel'), positionBox: $('#positionBox'), positionSide: $('#positionSide'), positionStake: $('#positionStake'), positionNote: $('#positionNote')
+    raceTrack: $('#raceTrack'), betLabel: $('#betLabel'), positionBox: $('#positionBox'), positionSide: $('#positionSide'), positionStake: $('#positionStake'), positionNote: $('#positionNote'), again: $('#again')
   };
   const state = {
     session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 500,
