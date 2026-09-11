@@ -27,9 +27,29 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   const REF_STORE = 'th3flow_pending_referral';
-  const refParam = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase();
+  const AFFILIATE_INTENT = 'th3flow_affiliate_intent';
+  const q = new URLSearchParams(location.search);
+  const refParam = (q.get('ref') || '').trim().toUpperCase();
+  const randomId = () => globalThis.crypto?.randomUUID?.() || ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16)}));
+  let referralVisitToken = null;
   if (refParam) {
-    try { localStorage.setItem(REF_STORE, JSON.stringify({ code: refParam, captured_at: Date.now() })); } catch {}
+    try {
+      const visitKey='th3flow_ref_visit_'+refParam;
+      referralVisitToken=localStorage.getItem(visitKey);
+      if(!referralVisitToken){referralVisitToken=randomId();localStorage.setItem(visitKey,referralVisitToken)}
+      localStorage.setItem(REF_STORE, JSON.stringify({ code: refParam, captured_at: Date.now(), visit_token: referralVisitToken }));
+    } catch {}
+  }
+  if(q.get('affiliate')==='1'){try{localStorage.setItem(AFFILIATE_INTENT,'1')}catch{}}
+  if(refParam&&referralVisitToken){
+    sb.rpc('record_referral_visit',{p_code:refParam,p_visit_token:referralVisitToken,p_landing_path:location.pathname,p_utm_source:q.get('utm_source'),p_utm_medium:q.get('utm_medium'),p_utm_campaign:q.get('utm_campaign')}).catch(()=>{});
+  } else {
+    try{
+      const pending=JSON.parse(localStorage.getItem(REF_STORE)||'null');
+      if(pending?.code&&pending?.visit_token&&Date.now()-Number(pending.captured_at||0)<8*24*60*60*1000){
+        sb.rpc('record_referral_visit',{p_code:pending.code,p_visit_token:pending.visit_token,p_landing_path:location.pathname,p_utm_source:null,p_utm_medium:null,p_utm_campaign:null}).catch(()=>{});
+      }
+    }catch{}
   }
   const E = {
     balance: $('#balance'), price: $('#price'), delta: $('#delta'), chart: $('#chart'), phase: $('#phase'), timer: $('#timer'),
@@ -185,7 +205,9 @@
       try{localStorage.removeItem(REF_STORE)}catch{}
       return;
     }
-    const {data,error}=await sb.rpc('claim_referral',{p_code:String(pending.code).toUpperCase()});
+    const call=pending.visit_token?'claim_referral_with_visit':'claim_referral';
+    const args=pending.visit_token?{p_code:String(pending.code).toUpperCase(),p_visit_token:pending.visit_token}:{p_code:String(pending.code).toUpperCase()};
+    const {data,error}=await sb.rpc(call,args);
     if(!error){
       try{localStorage.removeItem(REF_STORE)}catch{}
       if(data?.status==='attributed')toast('Referral connected');
@@ -213,6 +235,12 @@
       ]);
       state.profile=p.data||null; state.account=a.data||null;
       await loadReferralIdentity();
+      try{
+        if(localStorage.getItem(AFFILIATE_INTENT)==='1'){
+          localStorage.removeItem(AFFILIATE_INTENT);
+          setTimeout(()=>{location.href='../cabinet/?view=referrals'},250);
+        }
+      }catch{}
     } else { state.profile=null; state.account=null; state.entry=null; state.referralCode=null; }
     syncBalance(); syncEntryButton(); renderAccount();
   }
