@@ -61,7 +61,7 @@
   };
   const state = {
     session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 500,
-    latestBid: null, chartPoints: [], marketChannel: null, raceChannel: null, lobbyChannel: null, reactionChannel: null,
+    latestBid: null, chartPoints: [], marketQueue: [], marketQueuedSeq: new Set(), lastPlaybackSeq: -1, marketDelayMs: 30000, marketChannel: null, raceChannel: null, lobbyChannel: null, reactionChannel: null,
     lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: (globalThis.crypto?.randomUUID?.() || ('room-'+Date.now()+'-'+Math.random().toString(36).slice(2))), nextSession: null, pendingEntryRequest: null,
     referralCode: null
   };
@@ -180,11 +180,22 @@
     if(state.reactionChannel) await sb.removeChannel(state.reactionChannel);
     if(!state.race) return;
     const symbol=state.race.symbol, raceId=state.race.id;
-    const {data:latest}=await sb.from('market_latest').select('*').eq('symbol',symbol).maybeSingle();
-    if(latest){ state.latestBid=Number(latest.bid); pushPoint(state.latestBid,new Date(latest.source_time).getTime()); }
+    state.marketQueue=[]; state.marketQueuedSeq=new Set(); state.lastPlaybackSeq=-1;
+    const {data:settings}=await sb.from('platform_settings').select('market_delay_seconds').eq('singleton',true).maybeSingle();
+    state.marketDelayMs=Math.max(0,Number(settings?.market_delay_seconds??30))*1000;
+
+    const {data:seed,error:seedError}=await sb.rpc('get_market_playback_seed_v151',{p_symbol:symbol,p_seconds:75});
+    if(!seedError&&seed?.ticks){ enqueueMarketTicks(seed.ticks); drainMarketQueue(true); }
+    else {
+      const {data:latest}=await sb.from('market_latest').select('*').eq('symbol',symbol).maybeSingle();
+      if(latest){ state.latestBid=Number(latest.bid); pushPoint(state.latestBid,new Date(latest.source_time).getTime()); }
+    }
 
     state.marketChannel=sb.channel(`market:${symbol}`)
-      .on('broadcast',{event:'market_tick'},({payload})=>{ const bid=Number(payload.bid); if(!Number.isFinite(bid)) return; state.latestBid=bid; pushPoint(bid,Date.parse(payload.source_time)||Date.now()); renderPrice(); draw(); })
+      .on('broadcast',{event:'market_batch'},({payload})=>{
+        const d=Number(payload?.delay_seconds); if(Number.isFinite(d)&&d>=0) state.marketDelayMs=d*1000;
+        enqueueMarketTicks(payload?.ticks||[]);
+      })
       .subscribe();
     state.raceChannel=sb.channel(`race:${raceId}`)
       .on('broadcast',{event:'race_update'},async({payload})=>{ state.race={...state.race,...payload}; syncPools(); renderState(); renderLobby(); if(['settled','void'].includes(state.race.status)) await showSettlement(); })
@@ -195,6 +206,29 @@
       .subscribe(async status=>{ if(status==='SUBSCRIBED') await state.reactionChannel.track({joined_at:new Date().toISOString()}); });
   }
   function pushPoint(bid,time){ state.chartPoints.push({bid,time}); if(state.chartPoints.length>500) state.chartPoints.shift(); }
+  function enqueueMarketTicks(ticks){
+    if(!Array.isArray(ticks)||!ticks.length)return;
+    for(const t of ticks){
+      const bid=Number(t?.bid),time=Number(t?.time_msc),seq=Number(t?.seq);
+      if(!Number.isFinite(bid)||!Number.isFinite(time)||!Number.isFinite(seq))continue;
+      if(seq<=state.lastPlaybackSeq||state.marketQueuedSeq.has(seq))continue;
+      state.marketQueuedSeq.add(seq);
+      state.marketQueue.push({bid,time,seq});
+    }
+    state.marketQueue.sort((a,b)=>a.time-b.time||a.seq-b.seq);
+  }
+  function drainMarketQueue(forceHistory=false){
+    if(!state.marketQueue.length)return false;
+    const cutoff=Date.now()-state.marketDelayMs;
+    let changed=false,last=null;
+    while(state.marketQueue.length && (forceHistory ? state.marketQueue[0].time<=cutoff : state.marketQueue[0].time<=cutoff)){
+      const t=state.marketQueue.shift(); state.marketQueuedSeq.delete(t.seq);
+      if(t.seq<=state.lastPlaybackSeq)continue;
+      state.lastPlaybackSeq=t.seq; pushPoint(t.bid,t.time); last=t; changed=true;
+    }
+    if(last){state.latestBid=last.bid;}
+    return changed;
+  }
 
   async function claimPendingReferral(){
     if(!state.session)return;
@@ -510,7 +544,7 @@
   };
 
   // Keep lobby/race countdowns alive even without database writes.
-  timerHandle=setInterval(()=>{renderState();renderLobby();draw();},250); lobbyPoll=setInterval(loadLobby,15000);
+  timerHandle=setInterval(()=>{renderState();renderLobby();draw();},250); setInterval(()=>{if(drainMarketQueue()){renderPrice();draw();}},50); lobbyPoll=setInterval(loadLobby,15000);
   state.lobbyChannel=sb.channel('lobby').on('broadcast',{event:'lobby_update'},({payload})=>{const i=state.races.findIndex(r=>r.id===payload.id);if(i>=0)state.races[i]={...state.races[i],...payload};else state.races.push(payload);if(state.race?.id===payload.id)state.race={...state.race,...payload};renderLobby();syncPools();renderState();}).subscribe();
   sb.auth.onAuthStateChange((event,session)=>{
     state.session=session;

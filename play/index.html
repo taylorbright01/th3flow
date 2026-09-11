@@ -496,7 +496,7 @@ if (window.TH3FLOW_CONFIG?.mode === 'live') {
   Promise.resolve(window.__TH3FLOW_SDK_READY).then(ok => {
     if (!ok) return;
     const el = document.createElement('script');
-    el.src = './live-app.js?v=142';
+    el.src = './live-app.js?v=151';
     el.async = false;
     el.onerror = () => {
       console.error('TH3FLOW: live-app.js failed to load');
