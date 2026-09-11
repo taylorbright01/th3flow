@@ -42,12 +42,12 @@
   }
   if(q.get('affiliate')==='1'){try{localStorage.setItem(AFFILIATE_INTENT,'1')}catch{}}
   if(refParam&&referralVisitToken){
-    sb.rpc('record_referral_visit',{p_code:refParam,p_visit_token:referralVisitToken,p_landing_path:location.pathname,p_utm_source:q.get('utm_source'),p_utm_medium:q.get('utm_medium'),p_utm_campaign:q.get('utm_campaign')}).catch(()=>{});
+    void (async()=>{ const { error } = await sb.rpc('record_referral_visit',{p_code:refParam,p_visit_token:referralVisitToken,p_landing_path:location.pathname,p_utm_source:q.get('utm_source'),p_utm_medium:q.get('utm_medium'),p_utm_campaign:q.get('utm_campaign')}); if(error) console.warn('TH3FLOW referral visit tracking failed:', error); })();
   } else {
     try{
       const pending=JSON.parse(localStorage.getItem(REF_STORE)||'null');
       if(pending?.code&&pending?.visit_token&&Date.now()-Number(pending.captured_at||0)<8*24*60*60*1000){
-        sb.rpc('record_referral_visit',{p_code:pending.code,p_visit_token:pending.visit_token,p_landing_path:location.pathname,p_utm_source:null,p_utm_medium:null,p_utm_campaign:null}).catch(()=>{});
+        void (async()=>{ const { error } = await sb.rpc('record_referral_visit',{p_code:pending.code,p_visit_token:pending.visit_token,p_landing_path:location.pathname,p_utm_source:null,p_utm_medium:null,p_utm_campaign:null}); if(error) console.warn('TH3FLOW referral visit tracking failed:', error); })();
       }
     }catch{}
   }
