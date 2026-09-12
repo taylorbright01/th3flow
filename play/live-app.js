@@ -60,7 +60,7 @@
     raceTrack: $('#raceTrack'), betLabel: $('#betLabel'), positionBox: $('#positionBox'), positionSide: $('#positionSide'), positionStake: $('#positionStake'), positionNote: $('#positionNote'), again: $('#again')
   };
   const state = {
-    session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 500,
+    session: null, profile: null, account: null, race: null, races: [], entry: null, selectedSide: null, stakeNaira: 1000,
     latestBid: null, chartPoints: [], marketQueue: [], marketQueuedSeq: new Set(), lastPlaybackSeq: -1, marketDelayMs: 30000, marketChannel: null, raceChannel: null, lobbyChannel: null, reactionChannel: null,
     lastResult: null, leaderboardPeriod: 'daily', leaderboardCity: 'Nigeria', roomSessionId: (globalThis.crypto?.randomUUID?.() || ('room-'+Date.now()+'-'+Math.random().toString(36).slice(2))), nextSession: null, pendingEntryRequest: null,
     referralCode: null
