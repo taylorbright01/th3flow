@@ -11,7 +11,7 @@
 :root{--ink:#050505;--ivory:#eee8df;--ash:#aaa29a;--line:rgba(238,232,223,.14);--line2:rgba(238,232,223,.08);--up:#c8e6c2;--down:#efc0bc;--gold:#d8c29e}
 html,body{min-height:100%;background:#030303;color:var(--ivory);font-family:Montserrat,sans-serif}
 body{overflow-x:hidden;background:radial-gradient(ellipse at 50% 0%,#1b1814 0,#090807 30%,#030303 70%);min-height:100vh}
-body:before{content:"";position:fixed;inset:-50%;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .45s steps(3) infinite;z-index:30}
+body:before{content:"";position:fixed;inset:-20%;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain 1.2s steps(2) infinite;z-index:30}
 @keyframes grain{0%,100%{transform:translate(0)}33%{transform:translate(-2%,-3%)}66%{transform:translate(3%,1%)}}
 button,input{font-family:Montserrat,sans-serif}
 button{touch-action:manipulation}
@@ -83,14 +83,27 @@ canvas{display:block;width:100%;height:100%}
 
 .authgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.authfield{display:grid;gap:6px}.authfield.full{grid-column:1/-1}.authfield label{font-size:.44rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,232,223,.42)}.authfield input{border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ivory);padding:12px;outline:none}.account-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.account-note{margin-top:14px;border:1px solid var(--line);padding:12px;font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(238,232,223,.48);line-height:1.6}.quiet-lobby{grid-column:1/-1;border:1px solid var(--line);padding:22px;text-align:center;background:rgba(255,255,255,.015)}.quiet-lobby b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:300;letter-spacing:.13em}.quiet-lobby span{display:block;margin-top:7px;color:rgba(238,232,223,.42);font-size:.52rem;letter-spacing:.12em;text-transform:uppercase}.danger-soft{border-color:rgba(239,192,188,.25)!important;color:rgba(239,192,188,.8)!important}
 
-.launchbar{display:grid;grid-template-columns:1.25fr auto auto;align-items:center;gap:18px;border:1px solid rgba(216,194,158,.24);background:linear-gradient(90deg,rgba(216,194,158,.08),rgba(255,255,255,.015));padding:14px 16px;margin:0 0 12px}
+.launchbar{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr) auto;align-items:center;gap:18px;border:1px solid rgba(216,194,158,.24);background:linear-gradient(90deg,rgba(216,194,158,.08),rgba(255,255,255,.015));padding:14px 16px;margin:0 0 12px}
 .launchcopy span{display:block;font-size:.42rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(238,232,223,.4);margin-bottom:4px}
-.launchcopy strong{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:300;letter-spacing:.08em}
-.launchcount{display:flex;align-items:center;gap:8px}
+.launchcopy strong{display:block;font-family:'Cormorant Garamond',serif;font-size:1.28rem;font-weight:300;letter-spacing:.06em}
+.launchcopy p{font-family:'Cormorant Garamond',serif;font-style:italic;color:rgba(238,232,223,.42);font-size:.8rem;margin-top:4px;line-height:1.35}
+.launchmeter{min-width:0}
+.launchmeter-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.launchmeter-top strong{font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:300;letter-spacing:.03em}
+.launchmeter-top>span{font-size:.37rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(238,232,223,.36);text-align:right}
+.launchtrack{height:3px;background:rgba(238,232,223,.10);margin:7px 0 6px;overflow:hidden}
+.launchfill{display:block;height:100%;width:0;background:var(--gold);transition:width .5s ease}
+.launchremaining{font-size:.36rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(238,232,223,.34)}
+.launchcount{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.launchcount[hidden],.launchmeter[hidden]{display:none!important}
 .launchcount div{min-width:48px;text-align:center;border-left:1px solid var(--line);padding-left:8px}
 .launchcount b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:300;line-height:.95}
 .launchcount span{display:block;margin-top:3px;font-size:.34rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(238,232,223,.35)}
 .launchjoin{border:1px solid var(--ivory);background:var(--ivory);color:#070707;padding:11px 14px;font-size:.43rem;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+body.low-power:before{animation:none;opacity:.015}
+body.low-power .card,body.low-power .overlay{backdrop-filter:none}
+body.low-power .card{box-shadow:none}
+body.low-power .floater{display:none!important}
 .previewnotice{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:0 auto 12px;font-size:.39rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(238,232,223,.34)}
 .previewnotice span{border:1px solid rgba(216,194,158,.32);color:var(--gold);padding:5px 7px}
 .previewnotice b{font-weight:400;color:rgba(238,232,223,.62)}
@@ -101,9 +114,10 @@ body.prelaunch-mode .customstake input:disabled{opacity:.55;cursor:default}
 body.prelaunch-mode .enter{opacity:.78}
 body.live-launched .prelaunch-only{display:none!important}
 
-@media(max-width:920px){.launchbar{grid-template-columns:1fr auto}.launchjoin{grid-column:1/-1}.launchcount{justify-content:flex-end}.shell{grid-template-columns:1fr}.race{min-height:520px}.stage{height:340px}.phasebar{align-items:flex-end}.reacts{max-width:190px}.hero{margin-top:2vh}.top{grid-template-columns:1fr auto}.demo{display:none}.topright{grid-column:2;grid-row:1}.balance{display:none}}
+@media(max-width:920px){body:before{animation:none;opacity:.015}.card{backdrop-filter:none;box-shadow:none}.launchbar{grid-template-columns:1fr 1fr}.launchjoin{grid-column:1/-1}.launchcount{justify-content:flex-end}.shell{grid-template-columns:1fr}.race{min-height:520px}.stage{height:340px}.phasebar{align-items:flex-end}.reacts{max-width:190px}.hero{margin-top:2vh}.top{grid-template-columns:1fr auto}.demo{display:none}.topright{grid-column:2;grid-row:1}.balance{display:none}}
 @media(max-width:650px){.launchbar{grid-template-columns:1fr}.launchcount{justify-content:flex-start}.launchjoin{grid-column:auto;width:100%}.launchcount div{min-width:43px}.racetrack{grid-template-columns:1fr}.racecard{display:grid;grid-template-columns:1fr auto;gap:4px 16px}.rc-top,.rc-mid,.rc-bottom{grid-column:1/-1}.lobbyhint{display:none}.statsgrid{grid-template-columns:repeat(2,1fr)}.shareactions{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.wrap{padding:16px 11px 30px}.top{gap:8px}.navbtn{padding:8px 7px;font-size:.4rem}.hero h1{font-size:2.55rem}.racehead{padding:15px}.stage{height:300px;padding:10px}.phasebar{padding:13px 15px}.reacts{gap:4px;max-width:150px}.react{padding:6px 8px}.side{padding:13px}.price{font-size:3.2rem}.timer{font-size:1.85rem}.hours{font-size:.38rem;letter-spacing:.12em}.leaderrow{grid-template-columns:28px 1fr auto}.lstreak{display:none}.hrow{grid-template-columns:1.2fr .75fr .75fr .9fr}.modal{padding:17px}.topright .navbtn:nth-child(1){display:none}}
+@media(prefers-reduced-motion:reduce){body:before{animation:none}.floater{display:none!important}.launchfill{transition:none}}
 </style>
 </head>
 <body>
@@ -122,11 +136,16 @@ body.live-launched .prelaunch-only{display:none!important}
   </header>
 
   <section class="launchbar prelaunch-only" id="launchBar">
-    <div class="launchcopy"><span>THE FIRST FLOW · LAUNCH EVENT</span><strong>21 SEPTEMBER · 15:00 WAT</strong></div>
-    <div class="launchcount" aria-label="Countdown to Round 001">
+    <div class="launchcopy"><span id="launchEyebrow">THE FIRST FLOW · BUILD THE CROWD</span><strong id="launchHeadline">Loading launch counter…</strong><p id="launchSubline">When the signup target is reached, Round 001 is scheduled exactly 7 days later.</p></div>
+    <div class="launchmeter" id="launchMeter">
+      <div class="launchmeter-top"><strong><span id="signupCount">—</span> / <span id="signupTarget">500</span></strong><span>confirmed players</span></div>
+      <div class="launchtrack" aria-hidden="true"><i class="launchfill" id="signupProgress"></i></div>
+      <div class="launchremaining" id="signupRemaining">Loading…</div>
+    </div>
+    <div class="launchcount" id="launchCountdown" aria-label="Countdown to Round 001" hidden>
       <div><b id="cdDays">00</b><span>days</span></div><div><b id="cdHours">00</b><span>hours</span></div><div><b id="cdMinutes">00</b><span>mins</span></div><div><b id="cdSeconds">00</b><span>secs</span></div>
     </div>
-    <button class="launchjoin" id="launchJoin" type="button">JOIN THE LAUNCH</button>
+    <button class="launchjoin" id="launchJoin" type="button">JOIN THE FIRST FLOW</button>
   </section>
   <div class="previewnotice prelaunch-only"><span>PREVIEW MODE</span><b>SIMULATED EUR/USD</b><em>No live market data · no real entries</em></div>
 
@@ -370,16 +389,34 @@ body.live-launched .prelaunch-only{display:none!important}
 })();
 </script>
 <script>
-// Prelaunch is a 24/7 simulated preview. At 15:00 WAT on 21 September,
-// a reload automatically hands the same page back to the real live application.
+// v1.5.4 launch gate: stay in simulated preview mode until the signup target
+// is reached and its automatically armed 7-day countdown expires.
 (() => {
-  const launchAt = Date.parse('2026-09-21T14:00:00Z');
-  const prelaunch = Date.now() < launchAt;
-  document.body.classList.add(prelaunch ? 'prelaunch-mode' : 'live-launched');
-  Promise.resolve(window.__TH3FLOW_SDK_READY).then(ok => {
-    if (!ok && !prelaunch && window.TH3FLOW_CONFIG?.mode === 'live') return;
+  const cfg = window.TH3FLOW_CONFIG || {};
+  Promise.resolve(window.__TH3FLOW_SDK_READY).then(async ok => {
+    let status = null;
+    let prelaunch = true;
+    if (ok && cfg.mode === 'live' && window.supabase?.createClient) {
+      try {
+        const gate = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
+          auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+        });
+        const {data,error} = await gate.rpc('get_launch_hype_status');
+        if (!error && data) {
+          status = data;
+          window.__TH3FLOW_LAUNCH_STATUS = data;
+          const launchAt = data.launch_at ? Date.parse(data.launch_at) : NaN;
+          prelaunch = !Number.isFinite(launchAt) || Date.now() < launchAt;
+        } else if (error) {
+          console.warn('TH3FLOW launch counter unavailable; keeping preview mode.', error.message);
+        }
+      } catch (error) {
+        console.warn('TH3FLOW launch gate check failed; keeping preview mode.', error);
+      }
+    }
+    document.body.classList.add(prelaunch ? 'prelaunch-mode' : 'live-launched');
     const el = document.createElement('script');
-    el.src = prelaunch ? './prelaunch-app.js?v=153' : './live-app.js?v=153';
+    el.src = prelaunch ? './prelaunch-app.js?v=154' : './live-app.js?v=154';
     el.async = false;
     el.onerror = () => {
       console.error('TH3FLOW application script failed to load');
